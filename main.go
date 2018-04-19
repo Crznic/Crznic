@@ -11,7 +11,6 @@ import (
 	"errors"
 	"encoding/json"
 	"fmt"
-	"syscall"
 )
 
 // get the local ip and port based on our destination ip
