@@ -30,8 +30,9 @@ func localIPPort(dstip net.IP) (net.IP, layers.TCPPort) {
 	return nil, layers.TCPPort(1)
 }
 
+// TODO: Reuse more code for standard packet reading
 // reads the reply on a connection
-func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcport layers.TCPPort) (error) {
+func readSynReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcport layers.TCPPort) (error) {
 	for {
 		b := make([]byte, 4096)
 		log.Println("reading from conn")
@@ -107,9 +108,61 @@ func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) (error) {
 	}
 
 	// read the reply
-	if err := readReply(conn, dstip, dstport, srcport); err != nil {
+	if err := readSynReply(conn, dstip, dstport, srcport); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// TODO: Reuse more code with sendSyn
+// builds and sends an ack packet
+func sendAck(dstip net.IP, dstport layers.TCPPort, seq uint32) (error) {
+	srcip, srcport := localIPPort(dstip)
+	log.Printf("using srcip: %v", srcip.String())
+
+	// Our IP header... not used, but necessary for TCP checksumming.
+	ip := &layers.IPv4{
+		SrcIP:    srcip,
+		DstIP:    dstip,
+		Protocol: layers.IPProtocolTCP,
+	}
+
+	// Our TCP header
+	tcp := &layers.TCP{
+		SrcPort: srcport,
+		DstPort: dstport,
+		Seq:     seq,
+		ACK:     true,
+		Window:  14600,
+	}
+	tcp.SetNetworkLayerForChecksum(ip)
+
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{
+		ComputeChecksums: true,
+		FixLengths:       true,
+	}
+	if err := gopacket.SerializeLayers(buf, opts, tcp); err != nil {
+		return err
+	}
+
+	conn, err := net.ListenPacket("ip4:tcp", "0.0.0.0")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	log.Println("writing request")
+	if _, err := conn.WriteTo(buf.Bytes(), &net.IPAddr{IP: dstip}); err != nil {
+		return err
+	}
+
+	// Set deadline so we don't wait forever.
+	if err := conn.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
+		return err
+	}
+
+
 
 	return nil
 }
@@ -141,6 +194,12 @@ func main() {
 
 	// send the first syn packet
 	err = sendSyn(dstip, dstport, seq)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// send an ack packet
+	err = sendAck(dstip, dstport, seq)
 	if err != nil {
 		log.Fatal(err)
 	}
