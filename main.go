@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 	"errors"
+	"encoding/json"
 )
 
 // get the local ip and port based on our destination ip
@@ -62,7 +63,7 @@ func readSynReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, src
 }
 
 // builds and sends a CUSTOM TCP packet
-func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, message string) (error) {
+func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, message []byte) (error) {
 	srcip, srcport := localIPPort(dstip)
 	log.Printf("using srcip: %v", srcip.String())
 
@@ -81,7 +82,7 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		ACK:     true,
 		Ack:	 ack,
 		Window:  14600,
-		Padding: []byte(message),
+		Padding: message,
 	}
 	tcp.SetNetworkLayerForChecksum(ip)
 
@@ -139,20 +140,23 @@ func main() {
 		dstport = layers.TCPPort(d)
 	}
 
+	// build JSON
+	type Message struct {
+		Name string
+		Body string
+		Time int64
+	}
+	m := Message{"Alice", "Hello", 1294706395881547000}
+	b, _ := json.Marshal(m)
+
 	// define the custom ack number
 	var ack uint32
 	ack = 1
 
-	// send a custom packet
-	err = sendCustom(dstip, dstport, seq, ack, "Data 1")
+	// send a json as a custom TCP packet
+	err = sendCustom(dstip, dstport, seq, ack, b)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// send another custom packet
-	ack = 2
-	err = sendCustom(dstip, dstport, seq, ack, "Data 2")
-	if err != nil {
-		log.Fatal(err)
-	}
 }
