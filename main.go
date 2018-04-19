@@ -159,19 +159,10 @@ func client() {
 
 // handle packets server-side
 func handlePacket(packet gopacket.Packet) () {
-	var tcp layers.TCP
-
-	// Get the TCP layer from this packet
-	if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
-		fmt.Println("This is a TCP packet!")
-		// Get actual TCP data from this layer
-		tcp, _ := tcpLayer.(*layers.TCP)
-		fmt.Printf("From src port %d to dst port %d\n", tcp.SrcPort, tcp.DstPort)
+	// print ALL layers from this packet
+	for _, layer := range packet.Layers() {
+		fmt.Println("PACKET LAYER:", layer.LayerType())
 	}
-
-	log.Print(packet)
-	log.Print(tcp)
-	log.Print(tcp.Payload)
 }
 
 // server main function
