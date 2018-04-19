@@ -107,7 +107,7 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		return err
 	}
 
-	conn, err := net.ListenPacket("ip4", "0.0.0.0")
+	conn, err := net.ListenPacket("ip4:tcp", "0.0.0.0")
 	if err != nil {
 		return err
 	}
