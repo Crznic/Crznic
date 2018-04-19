@@ -25,7 +25,7 @@ func localIPPort() (net.IP, layers.TCPPort) {
 		addrs, _ := i.Addrs()
 		// handle err
 		splitAddr := strings.Split(addrs[len(addrs) - 2].String(), "/")
-		ip = net.IP(splitAddr[0])
+		ip = net.ParseIP(splitAddr[0])
 	}
 	tcpPort := layers.TCPPort(80)
 	return ip, tcpPort
