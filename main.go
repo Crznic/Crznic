@@ -78,11 +78,14 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 	srcip, srcport := localIPPort()
 	log.Printf("using srcip: %v", srcip.String())
 
-	// Our IP header... not used, but necessary for TCP checksumming.
+	// Our IP header
 	ip := &layers.IPv4{
-		SrcIP:    srcip,
-		DstIP:    dstip,
-		Protocol: layers.IPProtocolTCP,
+		SrcIP:    	srcip,
+		DstIP:    	dstip,
+		Protocol: 	layers.IPProtocolTCP,
+		Version:  	4,
+		Length:		60,
+		Flags:		layers.IPv4DontFragment,
 	}
 
 	// Our TCP header
