@@ -188,7 +188,7 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		ACK:     true,
 		Ack:	 ack,
 		Window:  14600,
-		Padding: []byte("SEND THIS DATA"),
+		Padding: []byte(message),
 	}
 	tcp.SetNetworkLayerForChecksum(ip)
 
