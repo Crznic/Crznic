@@ -10,6 +10,8 @@ import (
 	"time"
 	"errors"
 	"encoding/json"
+	"fmt"
+	"syscall"
 )
 
 // get the local ip and port based on our destination ip
@@ -110,16 +112,11 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		return err
 	}
 
-
-
 	return nil
 }
 
-func main() {
-	if len(os.Args) != 3 {
-		log.Printf("Usage: %s <host/ip> <port>\n", os.Args[0])
-		os.Exit(-1)
-	}
+// client main function
+func client() {
 	log.Println("starting")
 
 	// define the seq for this interaction
@@ -158,5 +155,48 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
 
+func server() {
+	// listen, get packet in bytes
+	var err error
+	fd, _ := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
+	addr := syscall.SockaddrInet4{
+		Port: 80,
+		Addr: [4]byte{127, 0, 0, 1},
+	}
+	var receivedBytes []byte
+	err = syscall.Sendto(fd, receivedBytes, 0, &addr)
+	if err != nil {
+		log.Fatal("Sendto:", err)
+	}
+
+	// translate packet
+	packet := gopacket.NewPacket(receivedBytes, layers.LayerTypeEthernet, gopacket.Lazy)
+
+	var tcp layers.TCP
+
+	// Get the TCP layer from this packet
+	if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+		fmt.Println("This is a TCP packet!")
+		// Get actual TCP data from this layer
+		tcp, _ := tcpLayer.(*layers.TCP)
+		fmt.Printf("From src port %d to dst port %d\n", tcp.SrcPort, tcp.DstPort)
+	}
+
+	log.Print(tcp.Padding)
+}
+
+func main() {
+	if len(os.Args) != 3 {
+		log.Printf("Usage: %s <host/ip> <port>\n", os.Args[0])
+		os.Exit(-1)
+	}
+	if os.Args[0] == "server" {
+		// run the server main
+		server()
+	} else {
+		// run the client main
+		client()
+	}
 }
