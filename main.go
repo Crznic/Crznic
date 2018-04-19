@@ -169,7 +169,7 @@ func sendAck(dstip net.IP, dstport layers.TCPPort, seq uint32) (error) {
 
 // TODO: Reuse more code with sendSyn
 // builds and sends a CUSTOM TCP packet
-func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32) (error) {
+func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, message string) (error) {
 	srcip, srcport := localIPPort(dstip)
 	log.Printf("using srcip: %v", srcip.String())
 
@@ -186,6 +186,7 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32) (error) {
 		DstPort: dstport,
 		Seq:     seq,
 		ACK:     true,
+		Ack:	 ack,
 		Window:  14600,
 		Padding: []byte("SEND THIS DATA"),
 	}
@@ -245,20 +246,19 @@ func main() {
 		dstport = layers.TCPPort(d)
 	}
 
+	// define the custom ack number
+	var ack uint32
+	ack = 1
+
 	// send a custom packet
-	err = sendCustom(dstip, dstport, seq)
+	err = sendCustom(dstip, dstport, seq, ack, "Data 1")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// send the first syn packet
-	err = sendSyn(dstip, dstport, seq)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// send an ack packet
-	err = sendAck(dstip, dstport, seq)
+	// send another custom packet
+	ack = 2
+	err = sendCustom(dstip, dstport, seq, ack, "Data 2")
 	if err != nil {
 		log.Fatal(err)
 	}
