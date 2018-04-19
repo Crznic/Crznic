@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 	"log"
 	"net"
 	"os"
@@ -156,25 +157,8 @@ func client() {
 	}
 }
 
-func server() {
-	conn, _ := net.ListenPacket("tcp", ":80")
-
-	buf := make([]byte, 2048)
-	for {
-		numRead, recvAddr, err := conn.ReadFrom(buf)
-		if err != nil {
-			fmt.Println(err)
-		}
-		if recvAddr != nil {
-			fmt.Println(recvAddr)
-		}
-		s := string(buf[:numRead])
-		fmt.Println(s)
-	}
-
-	// translate packet
-	packet := gopacket.NewPacket(buf, layers.LayerTypeEthernet, gopacket.Lazy)
-
+// handle packets server-side
+func handlePacket(packet gopacket.Packet) () {
 	var tcp layers.TCP
 
 	// Get the TCP layer from this packet
@@ -186,6 +170,20 @@ func server() {
 	}
 
 	log.Print(tcp.Padding)
+}
+
+// server main function
+func server() {
+	if handle, err := pcap.OpenLive("eth0", 1600, true, pcap.BlockForever); err != nil {
+		panic(err)
+	} else if err := handle.SetBPFFilter("tcp and port 80"); err != nil {
+		panic(err)
+	} else {
+		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+		for packet := range packetSource.Packets() {
+			handlePacket(packet)
+		}
+	}
 }
 
 func main() {
