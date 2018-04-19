@@ -4,7 +4,6 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
-	"github.com/google/gopacket/afpacket"
 	"log"
 	"net"
 	"os"
@@ -13,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
+	"syscall"
 )
 
 // get the local ip and port based on our destination ip
@@ -108,9 +107,23 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		return err
 	}
 
-	tpacket, err := afpacket.NewTPacket(afpacket.OptInterface("test"), afpacket.TPacketVersion2,
-		afpacket.OptBlockTimeout(time.Millisecond*10000))
-	tpacket.WritePacketData(buf.Bytes())
+	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
+	if err != nil {
+		fmt.Println("Error: " + err.Error())
+		return
+	}
+	fmt.Println("Obtained fd ", fd)
+	defer syscall.Close(fd)
+
+	var addr syscall.SockaddrLinklayer
+	addr.Protocol = syscall.ETH_P_ARP
+	addr.Ifindex = interf.Index
+	addr.Hatype = syscall.ARPHRD_ETHER
+
+	err = syscall.Sendto(fd, packet, 0, &addr)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return nil
 }
