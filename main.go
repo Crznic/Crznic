@@ -15,22 +15,26 @@ import (
 )
 
 // get the local ip and port based on our destination ip
-func localIPPort(dstip net.IP) (net.IP, layers.TCPPort) {
-	serverAddr, err := net.ResolveUDPAddr("udp", dstip.String()+":12345")
-	if err != nil {
-		log.Fatal(err)
-	}
+func localIPPort() (net.IP, layers.TCPPort) {
+	ifaces, _ := net.Interfaces()
+	var ip net.IP
 
-	// We don't actually connect to anything, but we can determine
-	// based on our destination ip what source ip we should use.
-	if con, err := net.DialUDP("udp", nil, serverAddr); err == nil {
-		if udpaddr, ok := con.LocalAddr().(*net.UDPAddr); ok {
-			tcpPort := layers.TCPPort(80)
-			return udpaddr.IP, tcpPort
+	// handle err
+	for _, i := range ifaces {
+		addrs, _ := i.Addrs()
+		// handle err
+		for _, addr := range addrs {
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			// process IP address
 		}
 	}
-	log.Fatal("could not get local ip: " + err.Error())
-	return nil, layers.TCPPort(1)
+	tcpPort := layers.TCPPort(80)
+	return ip, tcpPort
 }
 
 // gets payload data from a packet
@@ -77,7 +81,7 @@ func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcpor
 
 // builds and sends a CUSTOM TCP packet
 func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, message []byte) (error) {
-	srcip, srcport := localIPPort(dstip)
+	srcip, srcport := localIPPort()
 	log.Printf("using srcip: %v", srcip.String())
 
 	// Our IP header... not used, but necessary for TCP checksumming.
