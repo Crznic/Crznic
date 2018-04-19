@@ -169,7 +169,7 @@ func handlePacket(packet gopacket.Packet) () {
 		fmt.Printf("From src port %d to dst port %d\n", tcp.SrcPort, tcp.DstPort)
 	}
 
-	log.Print(tcp.Padding)
+	log.Print(tcp)
 }
 
 // server main function
