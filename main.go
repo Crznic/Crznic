@@ -61,6 +61,9 @@ func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcpor
 			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 				tcp, _ := tcpLayer.(*layers.TCP)
 
+				if tcp.RST == true {
+					continue
+				}
 				if tcp.DstPort == srcport {
 					payloadBuf := getPayloadData(packet)
 					fmt.Println(string(payloadBuf))
