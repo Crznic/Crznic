@@ -171,6 +171,7 @@ func handlePacket(packet gopacket.Packet) () {
 
 	log.Print(packet)
 	log.Print(tcp)
+	log.Print(tcp.Payload)
 }
 
 // server main function
