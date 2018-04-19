@@ -158,21 +158,23 @@ func client() {
 }
 
 func server() {
-	// listen, get packet in bytes
-	var err error
-	fd, _ := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
-	addr := syscall.SockaddrInet4{
-		Port: 80,
-		Addr: [4]byte{127, 0, 0, 1},
-	}
-	var receivedBytes []byte
-	err = syscall.Sendto(fd, receivedBytes, 0, &addr)
-	if err != nil {
-		log.Fatal("Sendto:", err)
+	conn, _ := net.ListenPacket("tcp", ":80")
+
+	buf := make([]byte, 2048)
+	for {
+		numRead, recvAddr, err := conn.ReadFrom(buf)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if recvAddr != nil {
+			fmt.Println(recvAddr)
+		}
+		s := string(buf[:numRead])
+		fmt.Println(s)
 	}
 
 	// translate packet
-	packet := gopacket.NewPacket(receivedBytes, layers.LayerTypeEthernet, gopacket.Lazy)
+	packet := gopacket.NewPacket(buf, layers.LayerTypeEthernet, gopacket.Lazy)
 
 	var tcp layers.TCP
 
