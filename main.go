@@ -174,7 +174,7 @@ func handlePacket(packet gopacket.Packet) () {
 
 // server main function
 func server() {
-	if handle, err := pcap.OpenLive("eth0", 1600, true, pcap.BlockForever); err != nil {
+	if handle, err := pcap.OpenLive("lo", 1600, true, pcap.BlockForever); err != nil {
 		panic(err)
 	} else if err := handle.SetBPFFilter("tcp and port 80"); err != nil {
 		panic(err)
