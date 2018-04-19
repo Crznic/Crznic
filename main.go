@@ -12,7 +12,6 @@ import (
 	"errors"
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 // get the local ip and port based on our destination ip
