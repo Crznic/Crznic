@@ -33,9 +33,21 @@ func localIPPort(dstip net.IP) (net.IP, layers.TCPPort) {
 	return nil, layers.TCPPort(1)
 }
 
-// TODO: Reuse more code for standard packet reading
+// gets payload data from a packet
+func getPayloadData(packet gopacket.Packet) ([]byte) {
+	// print ALL layers from this packet
+	for _, layer := range packet.Layers() {
+		fmt.Println("PACKET LAYER:", layer.LayerType())
+		if layer.LayerType() == gopacket.LayerTypePayload {
+			return layer.LayerContents()
+		}
+	}
+
+	return nil
+}
+
 // reads the reply on a connection
-func readSynReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcport layers.TCPPort) (error) {
+func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcport layers.TCPPort) (error) {
 	for {
 		b := make([]byte, 4096)
 		log.Println("reading from conn")
@@ -50,18 +62,17 @@ func readSynReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, src
 				tcp, _ := tcpLayer.(*layers.TCP)
 
 				if tcp.DstPort == srcport {
-					if tcp.SYN && tcp.ACK {
-						log.Printf("Recieved syn/ack: %s\n", dstport)
-						return nil
-					} else {
-						return errors.New("did not receive syn/ack")
-					}
+					payloadBuf := getPayloadData(packet)
+					fmt.Println(string(payloadBuf))
+					return nil
 				}
 			}
 		} else {
 			return errors.New("got packet not matching addr")
 		}
 	}
+
+	return errors.New("nothing read")
 }
 
 // builds and sends a CUSTOM TCP packet
@@ -112,6 +123,10 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		return err
 	}
 
+	if err := readReply(conn, dstip, dstport, srcport); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -157,17 +172,6 @@ func client() {
 	}
 }
 
-// handle packets server-side
-func handlePacket(packet gopacket.Packet) () {
-	// print ALL layers from this packet
-	for _, layer := range packet.Layers() {
-		fmt.Println("PACKET LAYER:", layer.LayerType())
-		if layer.LayerType() == gopacket.LayerTypePayload {
-			fmt.Println(string(layer.LayerContents()))
-		}
-	}
-}
-
 // server main function
 func server() {
 	if handle, err := pcap.OpenLive("lo", 1600, true, pcap.BlockForever); err != nil {
@@ -177,7 +181,8 @@ func server() {
 	} else {
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 		for packet := range packetSource.Packets() {
-			handlePacket(packet)
+			payloadBuf := getPayloadData(packet)
+			fmt.Println(string(payloadBuf))
 		}
 	}
 }
@@ -189,7 +194,9 @@ func main() {
 	}
 	if os.Args[1] == "server" {
 		// run the server main
-		server()
+		for {
+			server()
+		}
 	} else {
 		// run the client main
 		client()
