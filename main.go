@@ -4,15 +4,16 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"github.com/google/gopacket/afpacket"
 	"log"
 	"net"
 	"os"
 	"strconv"
-	"time"
 	"errors"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // get the local ip and port based on our destination ip
@@ -107,23 +108,9 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		return err
 	}
 
-	conn, err := net.ListenPacket("ip4:tcp", "0.0.0.0")
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	if _, err := conn.WriteTo(buf.Bytes(), &net.IPAddr{IP: dstip}); err != nil {
-		return err
-	}
-
-	// Set deadline so we don't wait forever.
-	if err := conn.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
-		return err
-	}
-
-	if err := readReply(conn, dstip, dstport, srcport); err != nil {
-		return err
-	}
+	tpacket, err := afpacket.NewTPacket(afpacket.OptInterface("test"), afpacket.TPacketVersion2,
+		afpacket.OptBlockTimeout(time.Millisecond*10000))
+	tpacket.WritePacketData(buf.Bytes())
 
 	return nil
 }
