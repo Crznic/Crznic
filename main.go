@@ -192,7 +192,7 @@ func main() {
 		log.Printf("Usage: %s <host/ip> <port>\n", os.Args[0])
 		os.Exit(-1)
 	}
-	if os.Args[0] == "server" {
+	if os.Args[1] == "server" {
 		// run the server main
 		server()
 	} else {
