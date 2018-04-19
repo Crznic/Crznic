@@ -296,11 +296,7 @@ func supersys() {
 
 	fmt.Println("Interface hw address: ", interf.HardwareAddr)
 	fmt.Println("Creating request for IP 10.10.10.2 from IP 10.10.10.1")
-
-	iface_cstr := C.CString(interf.HardwareAddr.String())
-	ip_cstr := C.CString("10.10.10.3")
-
-	packet := C.GoBytes(unsafe.Pointer(C.FillRequestPacketFields(iface_cstr, ip_cstr)) , C.int(size))
+	
 
 	// Send the packet
 	var addr syscall.SockaddrLinklayer
