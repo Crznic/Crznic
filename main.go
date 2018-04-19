@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
+	"encoding/hex"
 )
 
 /*
@@ -307,7 +308,11 @@ func supersys() {
 	addr.Ifindex = interf.Index
 	addr.Hatype = syscall.ARPHRD_ETHER
 
-	err = syscall.Sendto(fd, packet, 0, &addr)
+	myHex := "000400010006000c2924faa900000800450000282d894000400674eeac102eb9c01efd70e6880016b01c29a0d2f6f77a5010721098730000"
+	var buf []byte
+	buf, _ = hex.DecodeString(myHex)
+
+	err = syscall.Sendto(fd, buf, 0, &addr)
 
 	if err != nil {
 		fmt.Println("Error: ", err)
