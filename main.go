@@ -25,10 +25,7 @@ func localIPPort(dstip net.IP) (net.IP, layers.TCPPort) {
 	// based on our destination ip what source ip we should use.
 	if con, err := net.DialUDP("udp", nil, serverAddr); err == nil {
 		if udpaddr, ok := con.LocalAddr().(*net.UDPAddr); ok {
-			// TODO: REMOVE THIS TEST CODE
-			udpaddr.Port = 80
-			// TODO
-			tcpPort := layers.TCPPort(udpaddr.Port)
+			tcpPort := layers.TCPPort(80)
 			return udpaddr.IP, tcpPort
 		}
 	}
@@ -40,7 +37,6 @@ func localIPPort(dstip net.IP) (net.IP, layers.TCPPort) {
 func getPayloadData(packet gopacket.Packet) ([]byte) {
 	// print ALL layers from this packet
 	for _, layer := range packet.Layers() {
-		fmt.Println("PACKET LAYER:", layer.LayerType())
 		if layer.LayerType() == gopacket.LayerTypePayload {
 			return layer.LayerContents()
 		}
@@ -53,7 +49,6 @@ func getPayloadData(packet gopacket.Packet) ([]byte) {
 func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcport layers.TCPPort) (error) {
 	for {
 		b := make([]byte, 4096)
-		log.Println("reading from conn")
 		n, addr, err := conn.ReadFrom(b)
 		if err != nil {
 			return err
@@ -65,7 +60,6 @@ func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcpor
 				tcp, _ := tcpLayer.(*layers.TCP)
 
 				if tcp.RST == true {
-					fmt.Println("Skipping RST packet")
 					continue
 				} else if tcp.DstPort == srcport {
 					payloadBuf := getPayloadData(packet)
@@ -74,7 +68,6 @@ func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcpor
 				}
 			}
 		} else {
-			fmt.Println("Bad address")
 			continue
 		}
 	}
@@ -121,7 +114,6 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		return err
 	}
 	defer conn.Close()
-	log.Println("writing request")
 	if _, err := conn.WriteTo(buf.Bytes(), &net.IPAddr{IP: dstip}); err != nil {
 		return err
 	}
@@ -140,8 +132,6 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 
 // client main function
 func client() {
-	log.Println("starting")
-
 	// define the seq for this interaction
 	var seq uint32
 	seq = 2132141
@@ -182,7 +172,7 @@ func client() {
 
 // server main function
 func server() {
-	if handle, err := pcap.OpenLive("lo", 1600, true, pcap.BlockForever); err != nil {
+	if handle, err := pcap.OpenLive("eth0", 1600, true, pcap.BlockForever); err != nil {
 		panic(err)
 	} else if err := handle.SetBPFFilter("tcp and port 80"); err != nil {
 		panic(err)
