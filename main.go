@@ -62,9 +62,9 @@ func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcpor
 				tcp, _ := tcpLayer.(*layers.TCP)
 
 				if tcp.RST == true {
+					fmt.Println("Skipping RST packet")
 					continue
-				}
-				if tcp.DstPort == srcport {
+				} else if tcp.DstPort == srcport {
 					payloadBuf := getPayloadData(packet)
 					fmt.Println(string(payloadBuf))
 					return nil
@@ -96,6 +96,7 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		DstPort: dstport,
 		Seq:     seq,
 		ACK:     true,
+		RST:	 false,
 		Ack:	 ack,
 		Window:  14600,
 	}
