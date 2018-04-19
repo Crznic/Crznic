@@ -103,7 +103,7 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		FixLengths:       true,
 
 	}
-	if err := gopacket.SerializeLayers(buf, opts, tcp, gopacket.Payload(message)); err != nil {
+	if err := gopacket.SerializeLayers(buf, opts, ip, tcp, gopacket.Payload(message)); err != nil {
 		return err
 	}
 
