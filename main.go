@@ -8,11 +8,12 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"time"
+	//"time"
 	"errors"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"bufio"
 )
 
 // get the local ip and port based on our destination ip
@@ -73,6 +74,15 @@ func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcpor
 	return errors.New("nothing read")
 }
 
+func Open(addr string) (*bufio.ReadWriter, error) {
+	log.Println("Dial " + addr)
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	return bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)), nil
+}
+
 // builds and sends a CUSTOM TCP packet
 func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, message []byte) (error) {
 	srcip, srcport := localIPPort()
@@ -107,15 +117,15 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		return err
 	}
 
-	conn, err := net.ListenPacket("ip4:tcp", "0.0.0.0")
+	readWriter, err := Open(dstip.String() + ":" + dstport.String())
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
-	if _, err := conn.WriteTo(buf.Bytes(), &net.IPAddr{IP: dstip}); err != nil {
+	if _, err := readWriter.Write(buf.Bytes()); err != nil {
 		return err
 	}
 
+	/*
 	// Set deadline so we don't wait forever.
 	if err := conn.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
 		return err
@@ -124,6 +134,7 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 	if err := readReply(conn, dstip, dstport, srcport); err != nil {
 		return err
 	}
+	*/
 
 	return nil
 }
