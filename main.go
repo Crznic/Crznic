@@ -25,6 +25,9 @@ func localIPPort(dstip net.IP) (net.IP, layers.TCPPort) {
 	// based on our destination ip what source ip we should use.
 	if con, err := net.DialUDP("udp", nil, serverAddr); err == nil {
 		if udpaddr, ok := con.LocalAddr().(*net.UDPAddr); ok {
+			// TODO: REMOVE THIS TEST CODE
+			udpaddr.Port = 80
+			// TODO
 			tcpPort := layers.TCPPort(udpaddr.Port)
 			return udpaddr.IP, tcpPort
 		}
