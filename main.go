@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"errors"
 )
 
 // get the local ip and port based on our destination ip
@@ -30,7 +31,7 @@ func localIPPort(dstip net.IP) (net.IP, layers.TCPPort) {
 }
 
 // builds and sends a tcp packet
-func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) {
+func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) (err error) {
 	srcip, srcport := localIPPort(dstip)
 	log.Printf("using srcip: %v", srcip.String())
 
@@ -70,6 +71,12 @@ func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) {
 		log.Fatal(err)
 	}
 
+	// Set deadline so we don't wait forever.
+	if err := conn.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
+		log.Fatal(err)
+	}
+
+	// read the reply
 	for {
 		b := make([]byte, 4096)
 		log.Println("reading from conn")
@@ -86,15 +93,15 @@ func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) {
 
 				if tcp.DstPort == srcport {
 					if tcp.SYN && tcp.ACK {
-						log.Printf("Port %d is OPEN\n", dstport)
+						log.Printf("Recieved syn/ack: %s\n", dstport)
+						return nil
 					} else {
-						log.Printf("Port %d is CLOSED\n", dstport)
+						return errors.New("did not receive syn/ack")
 					}
-					return
 				}
 			}
 		} else {
-			log.Printf("Got packet not matching addr")
+			return errors.New("got packet not matching addr")
 		}
 	}
 }
@@ -124,5 +131,9 @@ func main() {
 		dstport = layers.TCPPort(d)
 	}
 
-	sendSyn(dstip, dstport, seq)
+	// send the first syn packet
+	err = sendSyn(dstip, dstport, seq)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
