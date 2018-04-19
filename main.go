@@ -74,7 +74,8 @@ func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcpor
 				}
 			}
 		} else {
-			return errors.New("got packet not matching addr")
+			fmt.Println("Bad address")
+			continue
 		}
 	}
 
