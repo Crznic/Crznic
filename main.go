@@ -245,6 +245,12 @@ func main() {
 		dstport = layers.TCPPort(d)
 	}
 
+	// send a custom packet
+	err = sendCustom(dstip, dstport, seq)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// send the first syn packet
 	err = sendSyn(dstip, dstport, seq)
 	if err != nil {
