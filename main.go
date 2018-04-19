@@ -30,6 +30,36 @@ func localIPPort(dstip net.IP) (net.IP, layers.TCPPort) {
 	return nil, layers.TCPPort(1)
 }
 
+// reads the reply on a connection
+func readReply(conn net.PacketConn, dstip net.IP, dstport layers.TCPPort, srcport layers.TCPPort) (error) {
+	for {
+		b := make([]byte, 4096)
+		log.Println("reading from conn")
+		n, addr, err := conn.ReadFrom(b)
+		if err != nil {
+			return err
+		} else if addr.String() == dstip.String() {
+			// Decode a packet
+			packet := gopacket.NewPacket(b[:n], layers.LayerTypeTCP, gopacket.Default)
+			// Get the TCP layer from this packet
+			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+				tcp, _ := tcpLayer.(*layers.TCP)
+
+				if tcp.DstPort == srcport {
+					if tcp.SYN && tcp.ACK {
+						log.Printf("Recieved syn/ack: %s\n", dstport)
+						return nil
+					} else {
+						return errors.New("did not receive syn/ack")
+					}
+				}
+			}
+		} else {
+			return errors.New("got packet not matching addr")
+		}
+	}
+}
+
 // builds and sends a tcp packet
 func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) (error) {
 	srcip, srcport := localIPPort(dstip)
@@ -58,51 +88,30 @@ func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) (error) {
 		FixLengths:       true,
 	}
 	if err := gopacket.SerializeLayers(buf, opts, tcp); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	conn, err := net.ListenPacket("ip4:tcp", "0.0.0.0")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer conn.Close()
 	log.Println("writing request")
 	if _, err := conn.WriteTo(buf.Bytes(), &net.IPAddr{IP: dstip}); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Set deadline so we don't wait forever.
 	if err := conn.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// read the reply
-	for {
-		b := make([]byte, 4096)
-		log.Println("reading from conn")
-		n, addr, err := conn.ReadFrom(b)
-		if err != nil {
-			return err
-		} else if addr.String() == dstip.String() {
-			// Decode a packet
-			packet := gopacket.NewPacket(b[:n], layers.LayerTypeTCP, gopacket.Default)
-			// Get the TCP layer from this packet
-			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
-				tcp, _ := tcpLayer.(*layers.TCP)
-
-				if tcp.DstPort == srcport {
-					if tcp.SYN && tcp.ACK {
-						log.Printf("Recieved syn/ack: %s\n", dstport)
-						return nil
-					} else {
-						return errors.New("did not receive syn/ack")
-					}
-				}
-			}
-		} else {
-			return errors.New("got packet not matching addr")
-		}
+	if err := readReply(conn, dstip, dstport, srcport); err != nil {
+		return err
 	}
+
+	return nil
 }
 
 func main() {
