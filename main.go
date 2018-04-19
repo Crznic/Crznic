@@ -86,16 +86,18 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 		Window:  14600,
 	}
 	tcp.SetNetworkLayerForChecksum(ip)
-	tcp.Payload = message
 
 	buf := gopacket.NewSerializeBuffer()
 	opts := gopacket.SerializeOptions{
 		ComputeChecksums: true,
 		FixLengths:       true,
+
 	}
-	if err := gopacket.SerializeLayers(buf, opts, tcp); err != nil {
-		return err
-	}
+	gopacket.SerializeLayers(buf, opts,
+		&layers.Ethernet{},
+		ip,
+		tcp,
+		gopacket.Payload([]byte{1, 2, 3, 4}))
 
 	conn, err := net.ListenPacket("ip4:tcp", "0.0.0.0")
 	if err != nil {
