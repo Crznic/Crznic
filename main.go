@@ -163,7 +163,7 @@ func handlePacket(packet gopacket.Packet) () {
 	for _, layer := range packet.Layers() {
 		fmt.Println("PACKET LAYER:", layer.LayerType())
 		if layer.LayerType() == gopacket.LayerTypePayload {
-			fmt.Println(layer.LayerContents())
+			fmt.Println(string(layer.LayerContents()))
 		}
 	}
 }
