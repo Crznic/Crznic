@@ -30,19 +30,19 @@ func localIPPort(dstip net.IP) (net.IP, layers.TCPPort) {
 }
 
 // builds and sends a tcp packet
-func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) (ip *layers.IPv4, tcp *layers.TCP) {
+func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) {
 	srcip, srcport := localIPPort(dstip)
 	log.Printf("using srcip: %v", srcip.String())
 
 	// Our IP header... not used, but necessary for TCP checksumming.
-	ip = &layers.IPv4{
+	ip := &layers.IPv4{
 		SrcIP:    srcip,
 		DstIP:    dstip,
 		Protocol: layers.IPProtocolTCP,
 	}
 
 	// Our TCP header
-	tcp = &layers.TCP{
+	tcp := &layers.TCP{
 		SrcPort: srcport,
 		DstPort: dstport,
 		Seq:     seq,
@@ -97,8 +97,6 @@ func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) (ip *layers.IPv4,
 			log.Printf("Got packet not matching addr")
 		}
 	}
-
-	return
 }
 
 func main() {
