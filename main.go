@@ -24,8 +24,8 @@ func localIPPort() (net.IP, layers.TCPPort) {
 	for _, i := range ifaces {
 		addrs, _ := i.Addrs()
 		// handle err
-		splitAddr := strings.Split(addrs[len(addrs) - 2].Network(), "/")
-		ip = net.IP(splitAddr[0])
+		splitAddr := strings.Split(addrs[len(addrs) - 2].String(), "/")
+		ip = net.ParseIP(splitAddr[0])
 	}
 	tcpPort := layers.TCPPort(80)
 	return ip, tcpPort
