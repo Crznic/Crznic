@@ -110,17 +110,23 @@ func sendCustom(dstip net.IP, dstport layers.TCPPort, seq uint32, ack uint32, me
 	fd, err := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
 	if err != nil {
 		fmt.Println("Error: " + err.Error())
-		return
+		return err
 	}
 	fmt.Println("Obtained fd ", fd)
 	defer syscall.Close(fd)
+
+	interf, err := net.InterfaceByName("eth0")
+	if err != nil {
+		fmt.Println("Could not find vboxnet interface")
+		return err
+	}
 
 	var addr syscall.SockaddrLinklayer
 	addr.Protocol = syscall.ETH_P_ARP
 	addr.Ifindex = interf.Index
 	addr.Hatype = syscall.ARPHRD_ETHER
 
-	err = syscall.Sendto(fd, packet, 0, &addr)
+	err = syscall.Sendto(fd, buf.Bytes(), 0, &addr)
 	if err != nil {
 		log.Fatal(err)
 	}
