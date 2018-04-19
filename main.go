@@ -27,11 +27,11 @@ func localIPPort(dstip net.IP) (net.IP, layers.TCPPort) {
 		}
 	}
 	log.Fatal("could not get local ip: " + err.Error())
-	return nil, -1
+	return nil, layers.TCPPort(1)
 }
 
 // builds and sends a tcp packet
-func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) (err error) {
+func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) (error) {
 	srcip, srcport := localIPPort(dstip)
 	log.Printf("using srcip: %v", srcip.String())
 
@@ -82,8 +82,7 @@ func sendSyn(dstip net.IP, dstport layers.TCPPort, seq uint32) (err error) {
 		log.Println("reading from conn")
 		n, addr, err := conn.ReadFrom(b)
 		if err != nil {
-			log.Println("error reading packet: ", err)
-			return
+			return err
 		} else if addr.String() == dstip.String() {
 			// Decode a packet
 			packet := gopacket.NewPacket(b[:n], layers.LayerTypeTCP, gopacket.Default)
@@ -115,7 +114,7 @@ func main() {
 
 	// define the seq for this interaction
 	var seq uint32
-	seq = 48901234789
+	seq = 2132141
 
 	dstaddrs, err := net.LookupIP(os.Args[1])
 	if err != nil {
