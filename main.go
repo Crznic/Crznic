@@ -169,6 +169,7 @@ func handlePacket(packet gopacket.Packet) () {
 		fmt.Printf("From src port %d to dst port %d\n", tcp.SrcPort, tcp.DstPort)
 	}
 
+	log.Print(packet)
 	log.Print(tcp)
 }
 
