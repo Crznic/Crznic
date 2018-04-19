@@ -162,6 +162,9 @@ func handlePacket(packet gopacket.Packet) () {
 	// print ALL layers from this packet
 	for _, layer := range packet.Layers() {
 		fmt.Println("PACKET LAYER:", layer.LayerType())
+		if layer.LayerType() == gopacket.LayerTypePayload {
+			fmt.Println(layer.LayerContents())
+		}
 	}
 }
 
