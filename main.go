@@ -81,6 +81,8 @@ func (c *Crznic) readPacket() {
 				log.Println(hexDump)
 			}
 		}
+
+		break;
 	}
 }
 
