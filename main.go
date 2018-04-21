@@ -36,14 +36,13 @@ func newHost(ip net.IP, mac net.HardwareAddr, port layers.TCPPort) *Host {
 
 
 func newCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
-	anewCrznic := &Crznic{
-	  Inter:	inter,
-	  Src:		src,
-	  Dst:		dst,
-	  Seq:		seq,
-	}
-
-	return anewCrznic
+  anewCrznic := &Crznic{
+	Inter:	inter,
+	Src:		src,
+	Dst:		dst,
+	Seq:		seq,
+  }
+  return anewCrznic
 }
 
 
@@ -109,16 +108,22 @@ func (c *Crznic) sendSYNPacket(payload string) {
 }
 
 
-func main() {
-  macAddr, _ := net.ParseMAC("0c:02:00:00:00:00")
+func getRouterMAC() (net.HardwareAddr) {
   rifs := RoutedInterface("ip", net.FlagUp | net.FlagBroadcast)
   var dstMac net.HardwareAddr
   if rifs != nil {
 	dstMac = rifs.HardwareAddr
   } else {
-	log.Fatal("No")
+	log.Fatal("No router address found")
   }
- 
+
+  return dstMac
+}
+
+
+func main() {
+  macAddr, _ := net.ParseMAC("0c:02:00:00:00:00")
+  dstMac := getRouterMAC()
   srcHost := newHost(net.ParseIP("10.0.0.1"), macAddr, layers.TCPPort(80))
   dstHost := newHost(net.ParseIP("10.0.0.2"), dstMac, layers.TCPPort(80))
 
