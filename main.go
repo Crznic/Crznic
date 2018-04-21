@@ -4,8 +4,10 @@ import (
   "net"
   "log"
   "syscall"
+  "encoding/hex"
   "github.com/google/gopacket"
   "github.com/google/gopacket/layers"
+  "github.com/google/gopacket/pcap"
 )
 
 
@@ -66,6 +68,22 @@ func (c *Crznic) sendPacket(pkt []byte) {
 }
 
 
+func (c *Crznic) readPacket() {
+	handle, _ := pcap.OpenLive(c.Inter, 1600, true, pcap.BlockForever)
+	handle.SetBPFFilter("tcp and port " + string(c.Src.Ip))
+	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	for packet := range packetSource.Packets() {
+		for _, layer := range packet.Layers() {
+			if layer.LayerType() == gopacket.LayerTypePayload {
+				payloadBuf := layer.LayerContents()
+				hexDump := hex.Dump(payloadBuf)
+				log.Println(hexDump)
+			}
+		}
+	}
+}
+
+
 func (c *Crznic) sendSYNPacket(payload string) {
   ethernet := &layers.Ethernet{
 	SrcMAC:	c.Src.Mac,
@@ -122,11 +140,13 @@ func getRouterMAC() (net.HardwareAddr) {
 
 
 func main() {
-  macAddr, _ := net.ParseMAC("0c:02:00:00:00:00")
-  dstMac := getRouterMAC()
-  srcHost := newHost(net.ParseIP("10.0.0.1"), macAddr, layers.TCPPort(80))
-  dstHost := newHost(net.ParseIP("10.0.0.2"), dstMac, layers.TCPPort(80))
+  macAddr, _ := net.ParseMAC("00:0c:29:24:fa:a9")
+  dstMac, _ := net.ParseMAC("00:50:56:fd:25:2c")
+  srcHost := newHost(net.ParseIP("172.16.46.185"), macAddr, layers.TCPPort(80))
+  dstHost := newHost(net.ParseIP("172.217.10.110"), dstMac, layers.TCPPort(80))
 
   crz := newCrznic("eth0", srcHost, dstHost, 1)
   crz.sendSYNPacket("MESSAGE")
+
+  crz.readPacket()
 }
