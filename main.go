@@ -3,6 +3,7 @@ package main
 import (
   "net"
   "log"
+  "time"
   "syscall"
   "encoding/hex"
   "github.com/google/gopacket"
@@ -70,7 +71,7 @@ func (c *Crznic) sendPacket(pkt []byte) {
 
 
 func (c *Crznic) readPacket() {
-	handle, _ := pcap.OpenLive(c.Inter, 1600, true, pcap.BlockForever)
+	handle, _ := pcap.OpenLive(c.Inter, 1600, true, time.second()*10)
 	handle.SetBPFFilter("tcp and port " + string(c.Src.Ip))
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
