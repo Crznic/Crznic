@@ -1,4 +1,4 @@
-package main
+package crznic
 
 import (
   "net"
@@ -26,7 +26,7 @@ type Crznic struct {
 }
 
 
-func newHost(ip net.IP, mac net.HardwareAddr, port layers.TCPPort) *Host {
+func NewHost(ip net.IP, mac net.HardwareAddr, port layers.TCPPort) *Host {
   anewHost := &Host{
 	Ip:		ip,
 	Mac:	mac,
@@ -37,7 +37,7 @@ func newHost(ip net.IP, mac net.HardwareAddr, port layers.TCPPort) *Host {
 }
 
 
-func newCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
+func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
   anewCrznic := &Crznic{
 	Inter:	inter,
 	Src:		src,
@@ -48,7 +48,7 @@ func newCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
 }
 
 
-func (c *Crznic) sendPacket(pkt []byte) {
+func (c *Crznic) SendPacket(pkt []byte) {
   fd, _ := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
   defer syscall.Close(fd)
   if_info, _ := net.InterfaceByName(c.Inter)
@@ -69,25 +69,25 @@ func (c *Crznic) sendPacket(pkt []byte) {
 }
 
 
-func (c *Crznic) readPacket() {
+func (c *Crznic) ReadPacket() (reply []byte) {
 	handle, _ := pcap.OpenLive(c.Inter, 1600, true, pcap.BlockForever)
 	handle.SetBPFFilter("tcp and port " + string(c.Src.Ip))
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range packetSource.Packets() {
 		for _, layer := range packet.Layers() {
 			if layer.LayerType() == gopacket.LayerTypePayload {
-				payloadBuf := layer.LayerContents()
-				hexDump := hex.Dump(payloadBuf)
-				log.Println(hexDump)
+				reply = layer.LayerContents()
 			}
 		}
 
-		break;
+		return reply
 	}
+
+	return nil
 }
 
 
-func (c *Crznic) sendSYNPacket(payload string) {
+func (c *Crznic) SendSYNPacket(payload string) {
   ethernet := &layers.Ethernet{
 	SrcMAC:	c.Src.Mac,
 	DstMAC:	c.Dst.Mac,
@@ -129,7 +129,7 @@ func (c *Crznic) sendSYNPacket(payload string) {
 }
 
 
-func getRouterMAC() (net.HardwareAddr) {
+func GetLocalMAC() (net.HardwareAddr) {
   rifs := RoutedInterface("ip", net.FlagUp | net.FlagBroadcast)
   var dstMac net.HardwareAddr
   if rifs != nil {
@@ -142,7 +142,7 @@ func getRouterMAC() (net.HardwareAddr) {
 }
 
 
-func main() {
+func sample() {
   macAddr, _ := net.ParseMAC("00:0c:29:24:fa:a9")
   dstMac, _ := net.ParseMAC("00:50:56:fd:25:2c")
   srcHost := newHost(net.ParseIP("172.16.46.185"), macAddr, layers.TCPPort(80))
@@ -152,4 +152,4 @@ func main() {
   crz.sendSYNPacket("MESSAGE")
 
   crz.readPacket()
-}
+
