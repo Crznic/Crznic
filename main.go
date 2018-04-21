@@ -50,6 +50,7 @@ func newCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
 
 func (c *Crznic) sendPacket(pkt []byte) {
   fd, _ := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
+  defer syscall.Close(fd)
   if_info, _ := net.InterfaceByName(c.Inter)
 
   var haddr [8]byte
