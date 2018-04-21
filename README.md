@@ -1,4 +1,4 @@
-# GoRaw
+# Crznic
 Reverse raw sockets without listening in golang, prototype
 
 ## INSTALL
