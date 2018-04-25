@@ -28,9 +28,9 @@ type Crznic struct {
 
 func NewHost(ip net.IP, mac net.HardwareAddr, port layers.TCPPort) *Host {
   anewHost := &Host{
-	Ip:		ip,
-	Mac:	mac,
-	Port:	port,
+		Ip:		ip,
+		Mac:	mac,
+		Port:	port,
   }
 
   return anewHost
@@ -39,10 +39,10 @@ func NewHost(ip net.IP, mac net.HardwareAddr, port layers.TCPPort) *Host {
 
 func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
   anewCrznic := &Crznic{
-	Inter:	inter,
-	Src:		src,
-	Dst:		dst,
-	Seq:		seq,
+		Inter:	inter,
+		Src:		src,
+		Dst:		dst,
+		Seq:		seq,
   }
   return anewCrznic
 }
@@ -56,10 +56,10 @@ func (c *Crznic) SendPacket(pkt []byte) {
   var haddr [8]byte
   copy(haddr[0:7], if_info.HardwareAddr[0:7])
   addr := syscall.SockaddrLinklayer{
-	Protocol: syscall.ETH_P_IP,
-	Ifindex:  if_info.Index,
+		Protocol: syscall.ETH_P_IP,
+		Ifindex:  if_info.Index,
     Halen:    uint8(len(if_info.HardwareAddr)),
-	Addr:     haddr,
+		Addr:     haddr,
   }
 
   syscall.Bind(fd, &addr)
@@ -88,44 +88,48 @@ func (c *Crznic) ReadPacket() (reply []byte) {
 
 
 func (c *Crznic) SendSYNPacket(payload string) {
-  ethernet := &layers.Ethernet{
-	SrcMAC:	c.Src.Mac,
-	DstMAC:	c.Dst.Mac,
-	EthernetType: 0x800,
-  }
-  
-  ip := &layers.IPv4{
-	Version:	4,
-	IHL:		5,
-	TOS:		0,
-	Id:			0,
-	Flags:		0,
-	FragOffset:	0,
-	TTL:		225,
-	SrcIP:		c.Src.Ip,
-	DstIP:		c.Dst.Ip,
-	Protocol:	layers.IPProtocolTCP,
+  // build ethernet layer
+	ethernet := &layers.Ethernet{
+		SrcMAC:	c.Src.Mac,
+		DstMAC:	c.Dst.Mac,
+		EthernetType: 0x800,
   }
 
+  // build ip layer
+  ip := &layers.IPv4{
+		Version:		4,
+		IHL:				5,
+		TOS:				0,
+		Id:					0,
+		Flags:			0,
+		FragOffset:	0,
+		TTL:				225,
+		SrcIP:			c.Src.Ip,
+		DstIP:			c.Dst.Ip,
+		Protocol:		layers.IPProtocolTCP,
+  }
+
+  // build tcp layer
   tcp := &layers.TCP{
-	SrcPort:	c.Src.Port,
-	DstPort:	c.Src.Port,
-	Seq:		c.Seq,
-	SYN:		true,
-	Window:		14600,
+		SrcPort:	c.Src.Port,
+		DstPort:	c.Src.Port,
+		Seq:			c.Seq,
+		SYN:			true,
+		Window:		14600,
   }
   tcp.SetNetworkLayerForChecksum(ip)
 
+  // serialize packet
   buf := gopacket.NewSerializeBuffer()
   opts := gopacket.SerializeOptions{
-	ComputeChecksums:	true,
-	FixLengths:			true,
+		ComputeChecksums:	true,
+		FixLengths:				true,
   }
   if err := gopacket.SerializeLayers(buf, opts, ethernet, ip, tcp, gopacket.Payload(payload)); err != nil {
-	log.Fatal(err)
+		log.Fatal(err)
   }
 
-  c.sendPacket(buf.Bytes())
+  c.SendPacket(buf.Bytes())
 }
 
 
@@ -143,13 +147,13 @@ func GetLocalMAC() (net.HardwareAddr) {
 
 
 func sample() {
-  macAddr, _ := net.ParseMAC("00:0c:29:24:fa:a9")
-  dstMac, _ := net.ParseMAC("00:50:56:fd:25:2c")
-  srcHost := newHost(net.ParseIP("172.16.46.185"), macAddr, layers.TCPPort(80))
-  dstHost := newHost(net.ParseIP("172.217.10.110"), dstMac, layers.TCPPort(80))
+	macAddr, _ := net.ParseMAC("00:0c:29:24:fa:a9")
+	dstMac, _ := net.ParseMAC("00:50:56:fd:25:2c")
+	srcHost := NewHost(net.ParseIP("172.16.46.185"), macAddr, layers.TCPPort(80))
+	dstHost := NewHost(net.ParseIP("172.217.10.110"), dstMac, layers.TCPPort(80))
 
-  crz := newCrznic("eth0", srcHost, dstHost, 1)
-  crz.sendSYNPacket("MESSAGE")
+	crz := NewCrznic("eth0", srcHost, dstHost, 1)
+	crz.SendSYNPacket("MESSAGE")
 
-  crz.readPacket()
-
+	crz.ReadPacket()
+}
