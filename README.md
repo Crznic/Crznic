@@ -1,5 +1,5 @@
 # Crznic
-Reverse raw sockets without listening in golang, prototype
+A "custom" layer 4 protocol for raw socket communication on linux. Golang library.  
 
 ## INSTALL
 ```
