@@ -10,12 +10,11 @@ import (
 )
 
 
-type Host struct{
+type Host struct {
   Ip		net.IP
   Mac		net.HardwareAddr
   Port		layers.TCPPort
 }
-
 
 type Crznic struct {
   Inter		string
@@ -26,24 +25,24 @@ type Crznic struct {
 
 
 func NewHost(ip net.IP, mac net.HardwareAddr, port layers.TCPPort) *Host {
-  anewHost := &Host{
+  newHost := &Host{
 		Ip:		ip,
 		Mac:	mac,
 		Port:	port,
   }
 
-  return anewHost
+  return newHost
 }
 
 
 func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
-  anewCrznic := &Crznic{
+  newCrznic := &Crznic{
 		Inter:	inter,
 		Src:		src,
 		Dst:		dst,
 		Seq:		seq,
   }
-  return anewCrznic
+  return newCrznic
 }
 
 
@@ -91,75 +90,18 @@ func (c *Crznic) ReadPacket() ([]byte) {
 	}
 }
 
+func (c *Crznic) SendTCPPacket(syn, ack, fin boolean, payload string) {
+	// build
+	packet := NewPacket(c)
+	packet.TCP.SYN = syn
+	packet.TCP.ACK = ack
+	packet.TCP.FIN = fin
 
-func (c *Crznic) SendSYNPacket(payload string) {
-  // build ethernet layer
-	ethernet := &layers.Ethernet{
-		SrcMAC:	c.Src.Mac,
-		DstMAC:	c.Dst.Mac,
-		EthernetType: 0x800,
-  }
+	// serialize
+	buf := gopacket.NewSerializeBuffer()
+	packet.Serialize(buf, payload)
 
-  // build ip layer
-  ip := &layers.IPv4{
-		Version:		4,
-		IHL:				5,
-		TOS:				0,
-		Id:					0,
-		Flags:			0,
-		FragOffset:	0,
-		TTL:				225,
-		SrcIP:			c.Src.Ip,
-		DstIP:			c.Dst.Ip,
-		Protocol:		layers.IPProtocolTCP,
-  }
-
-  // build tcp layer
-  tcp := &layers.TCP{
-		SrcPort:	c.Src.Port,
-		DstPort:	c.Src.Port,
-		Seq:			c.Seq,
-		Ack:			1337,
-		SYN:			true,
-		Window:		14600,
-  }
-  tcp.SetNetworkLayerForChecksum(ip)
-
-  // serialize packet
-  buf := gopacket.NewSerializeBuffer()
-  opts := gopacket.SerializeOptions{
-		ComputeChecksums:	true,
-		FixLengths:				true,
-  }
-  if err := gopacket.SerializeLayers(buf, opts, ethernet, ip, tcp, gopacket.Payload(payload)); err != nil {
-		log.Fatal(err)
-  }
-
-  c.SendPacket(buf.Bytes())
-}
-
-
-func GetLocalMAC() (net.HardwareAddr) {
-  rifs := RoutedInterface("ip", net.FlagUp | net.FlagBroadcast)
-  var dstMac net.HardwareAddr
-  if rifs != nil {
-		dstMac = rifs.HardwareAddr
-  } else {
-		log.Fatal("No router address found")
-  }
-
-  return dstMac
-}
-
-
-func sample() {
-	macAddr, _ := net.ParseMAC("00:0c:29:24:fa:a9")
-	dstMac, _ := net.ParseMAC("00:50:56:fd:25:2c")
-	srcHost := NewHost(net.ParseIP("172.16.46.185"), macAddr, layers.TCPPort(80))
-	dstHost := NewHost(net.ParseIP("172.217.10.110"), dstMac, layers.TCPPort(80))
-
-	crz := NewCrznic("eth0", srcHost, dstHost, 1)
-	crz.SendSYNPacket("MESSAGE")
-
-	crz.ReadPacket()
+	// send, update seq
+	c.SendPacket(buf.Bytes())
+	c.Seq++
 }
