@@ -89,12 +89,17 @@ func (c *Crznic) ReadPacket() ([]byte) {
 	}
 }
 
-func (c *Crznic) SendTCPPacket(syn, ack, fin bool, payload string) {
+func (c *Crznic) SendTCPPacket(flag string, payload string) {
 	// build
 	packet := NewPacket(c)
-	packet.TCP.SYN = syn
-	packet.TCP.ACK = ack
-	packet.TCP.FIN = fin
+  switch {
+    case flag == "SYN":
+      packet.TCP.SYN = true
+    case flag == "ACK":
+      packet.TCP.ACK = true
+    case flag == "FIN":
+      packet.TCP.FIN = true
+  }
 
 	// serialize
 	buf := gopacket.NewSerializeBuffer()
