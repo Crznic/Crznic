@@ -92,9 +92,6 @@ func (c *Crznic) ReadPacket() ([]byte) {
 	}
 }
 
-	return nil
-}
-
 
 func (c *Crznic) SendSYNPacket(payload string) {
   // build ethernet layer
