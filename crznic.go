@@ -23,11 +23,12 @@ type Crznic struct {
 }
 
 
-func NewHost(ip net.IP, mac net.HardwareAddr, port layers.TCPPort) *Host {
+func NewHost(ip net.IP, mac net.HardwareAddr, port uint16) *Host {
+	layersPort := layers.TCPPort(port)
   newHost := &Host{
 		Ip:		ip,
 		Mac:	mac,
-		Port:	port,
+		Port: layersPort,
   }
 
   return newHost
