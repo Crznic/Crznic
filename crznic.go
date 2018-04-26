@@ -7,7 +7,6 @@ import (
   "github.com/google/gopacket"
   "github.com/google/gopacket/layers"
   "github.com/google/gopacket/pcap"
-	"crypto/x509"
 )
 
 
