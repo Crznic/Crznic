@@ -2,7 +2,6 @@ package crznic
 
 import (
   "net"
-  "log"
   "syscall"
   "github.com/google/gopacket"
   "github.com/google/gopacket/layers"
@@ -90,7 +89,7 @@ func (c *Crznic) ReadPacket() ([]byte) {
 	}
 }
 
-func (c *Crznic) SendTCPPacket(syn, ack, fin boolean, payload string) {
+func (c *Crznic) SendTCPPacket(syn, ack, fin bool, payload string) {
 	// build
 	packet := NewPacket(c)
 	packet.TCP.SYN = syn
