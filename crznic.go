@@ -7,6 +7,7 @@ import (
   "github.com/google/gopacket"
   "github.com/google/gopacket/layers"
   "github.com/google/gopacket/pcap"
+	"crypto/x509"
 )
 
 
@@ -68,27 +69,28 @@ func (c *Crznic) SendPacket(pkt []byte) {
 }
 
 
-func (c *Crznic) ReadPacket() (reply []byte) {
+func (c *Crznic) ReadPacket() ([]byte) {
 	handle, _ := pcap.OpenLive(c.Inter, 1600, true, pcap.BlockForever)
 	handle.SetBPFFilter("tcp and port " + string(c.Src.Ip))
-	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	for {
+		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
-	packetSentinel := false
-	for packet := range packetSource.Packets() {
-		for _, layer := range packet.Layers() {
-			if layer.LayerType() == layers.LayerTypeTCP {
-				tcp, _ := layer.(*layers.TCP)
-				if tcp.Ack == 1337 {
-					packetSentinel = true
+		packetSentinel := false
+		for packet := range packetSource.Packets() {
+			for _, layer := range packet.Layers() {
+				if layer.LayerType() == layers.LayerTypeTCP {
+					tcp, _ := layer.(*layers.TCP)
+					if tcp.Ack == 1337 {
+						packetSentinel = true
+					}
+				}
+				if layer.LayerType() == gopacket.LayerTypePayload && packetSentinel {
+					return layer.LayerContents()
 				}
 			}
-			if layer.LayerType() == gopacket.LayerTypePayload && packetSentinel{
-				reply = layer.LayerContents()
-			}
 		}
-
-		return reply
 	}
+}
 
 	return nil
 }
