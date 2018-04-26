@@ -7,6 +7,7 @@ import (
 	"strings"
 	"errors"
 	"encoding/hex"
+	"fmt"
 )
 
 func GetRouterMAC() (net.HardwareAddr, error) {
@@ -30,7 +31,7 @@ func GetRouterMAC() (net.HardwareAddr, error) {
 				return nil, err
 			}
 
-			gatewayAddr = string(decode[3]) + "." + string(decode[2]) + "." + string(decode[1]) + "." + string(decode[0])
+			gatewayAddr = fmt.Sprintf("%v.%v.%v.%v", decode[3], decode[2], decode[1], decode[0])
 		}
 	}
 
