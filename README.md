@@ -7,7 +7,7 @@ go get github.com/Crznic/Crznic
 ```
 
 ## USAGE
-Read sample function  
+Read sample function
 
 Create MAC addresses for local and target
 ```

@@ -72,9 +72,17 @@ func (c *Crznic) ReadPacket() (reply []byte) {
 	handle, _ := pcap.OpenLive(c.Inter, 1600, true, pcap.BlockForever)
 	handle.SetBPFFilter("tcp and port " + string(c.Src.Ip))
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+
+	packetSentinel := false
 	for packet := range packetSource.Packets() {
 		for _, layer := range packet.Layers() {
-			if layer.LayerType() == gopacket.LayerTypePayload {
+			if layer.LayerType() == layers.LayerTypeTCP {
+				tcp, _ := layer.(*layers.TCP)
+				if tcp.Ack == 1337 {
+					packetSentinel = true
+				}
+			}
+			if layer.LayerType() == gopacket.LayerTypePayload && packetSentinel{
 				reply = layer.LayerContents()
 			}
 		}
@@ -113,6 +121,7 @@ func (c *Crznic) SendSYNPacket(payload string) {
 		SrcPort:	c.Src.Port,
 		DstPort:	c.Src.Port,
 		Seq:			c.Seq,
+		Ack:			1337,
 		SYN:			true,
 		Window:		14600,
   }
@@ -136,9 +145,9 @@ func GetLocalMAC() (net.HardwareAddr) {
   rifs := RoutedInterface("ip", net.FlagUp | net.FlagBroadcast)
   var dstMac net.HardwareAddr
   if rifs != nil {
-	dstMac = rifs.HardwareAddr
+		dstMac = rifs.HardwareAddr
   } else {
-	log.Fatal("No router address found")
+		log.Fatal("No router address found")
   }
 
   return dstMac
