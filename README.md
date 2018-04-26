@@ -9,16 +9,28 @@ go get github.com/Crznic/Crznic
 ## USAGE
 Read sample function
 
-Create MAC addresses for local and target
+Create MAC addresses for src and dst
 ```
-macAddr, _ := net.ParseMAC("00:0c:29:24:fa:a9")
-dstMac, _ := net.ParseMAC("00:50:56:fd:25:2c")
+srcMAC, _ := net.ParseMAC("00:0c:29:24:fa:a9")
+dstMAC, _ := net.ParseMAC("00:50:56:fd:25:2c")
+```
+
+Create IP addresses for src and dst
+```
+srcIP = net.ParseIP("172.16.46.185")
+dstIP = net.ParseIP("172.217.10.110")
+```
+
+Create gopacket TCPPorts
+```
+srcPort := layers.TCPPort(80)
+dstPort := layers.TCPPort(80)
 ```
 
 Create host structs
 ```
-srcHost := NewHost(net.ParseIP("172.16.46.185"), macAddr, layers.TCPPort(80))
-dstHost := NewHost(net.ParseIP("172.217.10.110"), dstMac, layers.TCPPort(80))
+srcHost := NewHost(srcIP, srcMAC, srcPort)
+dstHost := NewHost(dstIP, dstMAC, dstPort)
 ```
 
 Create crznic handler
@@ -26,9 +38,9 @@ Create crznic handler
 crz := NewCrznic("eth0", srcHost, dstHost, 1)
 ```
 
-Send a packet
+Send a SYN packet
 ```
-crz.SendSYNPacket("MESSAGE")
+crz.SendTCPPacket("SYN", "MESSAGE")
 ```
 
 Listen for a packet
