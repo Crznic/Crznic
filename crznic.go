@@ -144,6 +144,22 @@ func (c *Crznic) ListenForACK() error {
 	}
 }
 
+// listen for a tcp packet without flags, update object when received
+func (c *Crznic) ListenForNoFlag() (string, error) {
+	for {
+		packet, err := c.ReadPacket()
+		if err != nil {
+			return "", err
+		}
+
+		tcpLayer := packet.Layer(layers.LayerTypeTCP)
+		tcp, _ := tcpLayer.(*layers.TCP)
+		if !tcp.ACK && !tcp.SYN && !tcp.RST && !tcp.FIN {
+			return string(tcp.Payload), nil
+		}
+	}
+}
+
 // send a TCP packet, use @param flag to specify which flags to set true
 func (c *Crznic) SendTCPPacket(flag string, payload string) {
 	// build
@@ -202,4 +218,15 @@ func (c *Crznic) SendData(payload string) error {
 	}
 
 	return nil
+}
+
+// receive data, respond with an ACK
+func (c *Crznic) ReceiveData() (string, error) {
+	payload, err := c.ListenForNoFlag()
+	if err != nil {
+		return "", err
+	}
+	c.SendTCPPacket("ACK", "")
+
+	return payload, err
 }
