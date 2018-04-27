@@ -100,6 +100,7 @@ func (c *Crznic) ListenForSYN() error {
 		tcp, _ := tcpLayer.(*layers.TCP)
 		if tcp.SYN {
 			c.Ack = tcp.Seq + 1
+			c.Dst.Port = tcp.SrcPort
 			return nil
 		}
 	}
