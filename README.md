@@ -21,21 +21,15 @@ srcIP = net.ParseIP("172.16.46.185")
 dstIP = net.ParseIP("172.217.10.110")
 ```
 
-Create gopacket TCPPorts
+Create host structs, use uint16 for port numbers
 ```
-srcPort := layers.TCPPort(80)
-dstPort := layers.TCPPort(80)
-```
-
-Create host structs
-```
-srcHost := NewHost(srcIP, srcMAC, srcPort)
-dstHost := NewHost(dstIP, dstMAC, dstPort)
+srcHost := crznic.NewHost(srcIP, srcMAC, 80)
+dstHost := crznic.NewHost(dstIP, dstMAC, 80)
 ```
 
 Create crznic handler
 ```
-crz := NewCrznic("eth0", srcHost, dstHost, 1)
+crz := crznic.NewCrznic("eth0", srcHost, dstHost, 1)
 ```
 
 Send a SYN packet
