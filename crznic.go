@@ -6,6 +6,7 @@ import (
   "github.com/google/gopacket"
   "github.com/google/gopacket/layers"
   "github.com/google/gopacket/pcap"
+	"errors"
 )
 
 
@@ -20,6 +21,7 @@ type Crznic struct {
   Src		*Host
   Dst		*Host
   Seq		uint32
+  Ack		uint32
 }
 
 
@@ -41,6 +43,7 @@ func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
 		Src:		src,
 		Dst:		dst,
 		Seq:		seq,
+		Ack:		1337,
   }
   return newCrznic
 }
@@ -67,25 +70,37 @@ func (c *Crznic) SendPacket(pkt []byte) {
 }
 
 
-func (c *Crznic) ReadPacket() ([]byte) {
+func (c *Crznic) ReadPacket() (gopacket.Packet, error) {
 	handle, _ := pcap.OpenLive(c.Inter, 1600, true, pcap.BlockForever)
 	handle.SetBPFFilter("tcp and port " + string(c.Src.Ip))
-	for {
-		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
-		packetSentinel := false
+	for {
 		for packet := range packetSource.Packets() {
 			for _, layer := range packet.Layers() {
 				if layer.LayerType() == layers.LayerTypeTCP {
-					tcp, _ := layer.(*layers.TCP)
-					if tcp.Ack == 1337 {
-						packetSentinel = true
-					}
-				}
-				if layer.LayerType() == gopacket.LayerTypePayload && packetSentinel {
-					return layer.LayerContents()
+					return packet, nil
 				}
 			}
+		}
+	}
+
+	return nil, errors.New("no TCP packet received")
+}
+
+// listens for a SYN packet, updates the Crznic object with new data
+func (c *Crznic) ListenForSYN() error {
+	for {
+		packet, err := c.ReadPacket()
+		if err != nil {
+			return err
+		}
+
+		tcpLayer := packet.Layer(layers.LayerTypeTCP)
+		tcp, _ := tcpLayer.(*layers.TCP)
+		if tcp.SYN {
+			c.Ack = tcp.Seq + 1
+			return nil
 		}
 	}
 }

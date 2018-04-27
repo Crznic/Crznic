@@ -39,7 +39,7 @@ func NewPacket(c *Crznic) *Packet {
 			SrcPort:	c.Src.Port,
 			DstPort:	c.Src.Port,
 			Seq:			c.Seq,
-			Ack:			1337,
+			Ack:			c.Ack,
 			Window:		14600,
 		}
 		tcp.SetNetworkLayerForChecksum(ip)
