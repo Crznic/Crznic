@@ -19,11 +19,12 @@ type Host struct {
 
 // the connection handler object, keeps track of seq and ack, contains methods for working with the socket
 type Crznic struct {
-  Inter		string
-  Src		*Host
-  Dst		*Host
-  Seq		uint32
-  Ack		uint32
+  Inter			string
+  Src				*Host
+  Dst				*Host
+  Seq				uint32
+  Ack				uint32
+  connected	bool
 }
 
 
@@ -42,11 +43,12 @@ func NewHost(ip net.IP, mac net.HardwareAddr, port uint16) *Host {
 // create a new Crznic object
 func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
   newCrznic := &Crznic{
-		Inter:	inter,
-		Src:		src,
-		Dst:		dst,
-		Seq:		seq,
-		Ack:		1337,
+		Inter:			inter,
+		Src:				src,
+		Dst:				dst,
+		Seq:				seq,
+		Ack:				1337,
+		connected: 	false,
   }
   return newCrznic
 }
@@ -178,6 +180,22 @@ func (c *Crznic) InitiateConnection() error {
 	}
 
 	c.SendTCPPacket("SYN-ACK", "")
+	err = c.ListenForACK()
+	if err != nil {
+		return err
+	}
+
+	c.connected = true
+	return nil
+}
+
+// send data to an established connection
+func (c *Crznic) SendData(payload string) error {
+	if !c.connected {
+		return errors.New("no connection established")
+	}
+
+	c.SendTCPPacket("", payload)
 	err = c.ListenForACK()
 	if err != nil {
 		return err
