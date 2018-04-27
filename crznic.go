@@ -168,3 +168,20 @@ func (c *Crznic) SendTCPPacket(flag string, payload string) {
 	c.SendPacket(buf.Bytes())
 	c.Seq++
 }
+
+// start a connection with the destination host
+func (c *Crznic) InitiateConnection() error {
+	c.SendTCPPacket("SYN", "")
+	err := c.ListenForSYNACK()
+	if err != nil {
+		return err
+	}
+
+	c.SendTCPPacket("SYN-ACK", "")
+	err = c.ListenForACK()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
