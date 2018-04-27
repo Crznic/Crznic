@@ -37,7 +37,7 @@ func NewPacket(c *Crznic) *Packet {
 		// build tcp layer
 		tcp := &layers.TCP{
 			SrcPort:	c.Src.Port,
-			DstPort:	c.Src.Port,
+			DstPort:	c.Dst.Port,
 			Seq:			c.Seq,
 			Ack:			c.Ack,
 			Window:		14600,
