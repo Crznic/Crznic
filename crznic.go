@@ -14,7 +14,7 @@ import (
 type Host struct {
   Ip		net.IP
   Mac		net.HardwareAddr
-  Port		layers.TCPPort
+  Port	layers.TCPPort
 }
 
 // the connection handler object, keeps track of seq and ack, contains methods for working with the socket
