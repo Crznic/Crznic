@@ -73,9 +73,9 @@ func (c *Crznic) SendPacket(pkt []byte) {
 func (c *Crznic) ReadPacket() (gopacket.Packet, error) {
 	handle, _ := pcap.OpenLive(c.Inter, 1600, true, pcap.BlockForever)
 	handle.SetBPFFilter("tcp and port " + string(c.Src.Ip))
-	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 
 	for {
+		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 		for packet := range packetSource.Packets() {
 			for _, layer := range packet.Layers() {
 				if layer.LayerType() == layers.LayerTypeTCP {
