@@ -150,6 +150,8 @@ func (c *Crznic) SendTCPPacket(flag string, payload string) {
       packet.TCP.ACK = true
     case flag == "FIN":
       packet.TCP.FIN = true
+		case flag == "RST":
+			packet.TCP.RST = true
   }
 
 	// serialize
