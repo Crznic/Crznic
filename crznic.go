@@ -98,9 +98,40 @@ func (c *Crznic) ListenForSYN() error {
 
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
-		if tcp.SYN {
+		if tcp.SYN && !tcp.ACK {
 			c.Ack = tcp.Seq + 1
 			c.Dst.Port = tcp.SrcPort
+			return nil
+		}
+	}
+}
+
+func (c *Crznic) ListenForSYNACK() error {
+	for {
+		packet, err := c.ReadPacket()
+		if err != nil {
+			return err
+		}
+
+		tcpLayer := packet.Layer(layers.LayerTypeTCP)
+		tcp, _ := tcpLayer.(*layers.TCP)
+		if tcp.SYN && tcp.ACK {
+			c.Ack = tcp.Seq + 1
+			return nil
+		}
+	}
+}
+
+func (c *Crznic) ListenForACK() error {
+	for {
+		packet, err := c.ReadPacket()
+		if err != nil {
+			return err
+		}
+
+		tcpLayer := packet.Layer(layers.LayerTypeTCP)
+		tcp, _ := tcpLayer.(*layers.TCP)
+		if tcp.ACK && !tcp.SYN {
 			return nil
 		}
 	}
