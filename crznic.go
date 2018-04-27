@@ -10,12 +10,14 @@ import (
 )
 
 
+// the host object, used for keeping track of ip/mac/port associated with each target/source
 type Host struct {
   Ip		net.IP
   Mac		net.HardwareAddr
   Port		layers.TCPPort
 }
 
+// the connection handler object, keeps track of seq and ack, contains methods for working with the socket
 type Crznic struct {
   Inter		string
   Src		*Host
@@ -25,6 +27,7 @@ type Crznic struct {
 }
 
 
+// create a new Host object
 func NewHost(ip net.IP, mac net.HardwareAddr, port uint16) *Host {
 	layersPort := layers.TCPPort(port)
   newHost := &Host{
@@ -36,7 +39,7 @@ func NewHost(ip net.IP, mac net.HardwareAddr, port uint16) *Host {
   return newHost
 }
 
-
+// create a new Crznic object
 func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
   newCrznic := &Crznic{
 		Inter:	inter,
@@ -48,7 +51,7 @@ func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
   return newCrznic
 }
 
-
+// send a constructed packet
 func (c *Crznic) SendPacket(pkt []byte) {
   fd, _ := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
   defer syscall.Close(fd)
@@ -69,7 +72,7 @@ func (c *Crznic) SendPacket(pkt []byte) {
   syscall.SetLsfPromisc(c.Inter, false)
 }
 
-
+// read a packet off the wire
 func (c *Crznic) ReadPacket() (gopacket.Packet, error) {
 	handle, _ := pcap.OpenLive(c.Inter, 1600, true, pcap.BlockForever)
 	handle.SetBPFFilter("tcp and port " + string(c.Src.Ip))
@@ -106,6 +109,7 @@ func (c *Crznic) ListenForSYN() error {
 	}
 }
 
+// listens for SYN ACK, updates object
 func (c *Crznic) ListenForSYNACK() error {
 	for {
 		packet, err := c.ReadPacket()
@@ -122,6 +126,7 @@ func (c *Crznic) ListenForSYNACK() error {
 	}
 }
 
+// listen for ACK, update object when received
 func (c *Crznic) ListenForACK() error {
 	for {
 		packet, err := c.ReadPacket()
@@ -137,6 +142,7 @@ func (c *Crznic) ListenForACK() error {
 	}
 }
 
+// send a TCP packet, use @param flag to specify which flags to set true
 func (c *Crznic) SendTCPPacket(flag string, payload string) {
 	// build
 	packet := NewPacket(c)
