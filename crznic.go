@@ -172,6 +172,11 @@ func (c *Crznic) SendTCPPacket(flag string, payload string) {
 			packet.TCP.ACK = true
     case flag == "ACK":
       packet.TCP.ACK = true
+		case flag == "PSH-ACK":
+			packet.TCP.PSH = true
+			packet.TCP.ACK = true
+		case flag == "PSH":
+			packet.TCP.PSH = true
     case flag == "FIN":
       packet.TCP.FIN = true
 		case flag == "RST":
