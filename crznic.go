@@ -7,6 +7,7 @@ import (
   "github.com/google/gopacket/layers"
   "github.com/google/gopacket/pcap"
 	"errors"
+	"crypto/x509"
 )
 
 
@@ -111,6 +112,9 @@ func (c *Crznic) SendTCPPacket(flag string, payload string) {
   switch {
     case flag == "SYN":
       packet.TCP.SYN = true
+		case flag == "SYN-ACK":
+			packet.TCP.SYN = true
+			packet.TCP.ACK = true
     case flag == "ACK":
       packet.TCP.ACK = true
     case flag == "FIN":
