@@ -250,12 +250,6 @@ func (c *Crznic) SendData(payload string) error {
 		}
 	}
 
-	c.SendTCPPacket("PSH-ACK", "THIS PACKET SHOULD BE IGNORED")
-	err := c.ListenForACK()
-	if err != nil {
-		return err
-	}
-
 	for _, part := range payloadSlices {
 		paddedPart := "          <<" + part
 		c.SendTCPPacket("PSH-ACK", paddedPart)
