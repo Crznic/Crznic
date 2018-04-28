@@ -146,7 +146,7 @@ func (c *Crznic) ListenForACK() error {
 }
 
 // listen for a tcp packet without flags, update object when received
-func (c *Crznic) ListenForNoFlag() (string, error) {
+func (c *Crznic) ListenForPSHACK() (string, error) {
 	for {
 		packet, err := c.ReadPacket()
 		if err != nil {
@@ -155,7 +155,7 @@ func (c *Crznic) ListenForNoFlag() (string, error) {
 
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
-		if !tcp.ACK && !tcp.SYN && !tcp.RST && !tcp.FIN {
+		if tcp.ACK && tcp.PSH {
 			c.Ack = tcp.Seq + uint32(len(tcp.Payload))
 			c.Seq = tcp.Ack
 			return string(tcp.Payload), nil
@@ -224,12 +224,11 @@ func (c *Crznic) SendData(payload string) error {
 
 // receive data, respond with an ACK
 func (c *Crznic) ReceiveData() (string, error) {
-	payload, err := c.ListenForNoFlag()
+	payload, err := c.ListenForPSHACK()
 	if err != nil {
 		return "", err
 	}
 
-	c.ListenForNoFlag()
 	c.SendTCPPacket("ACK", "")
 
 	return payload, err
