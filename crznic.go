@@ -235,7 +235,7 @@ func (c *Crznic) ReceiveData() (string, error) {
 		return "", err
 	}
 
-	c.
+	c.ListenForNoFlag()
 	c.SendTCPPacket("ACK", "")
 
 	return payload, err
