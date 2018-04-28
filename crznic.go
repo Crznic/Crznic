@@ -243,6 +243,8 @@ func (c *Crznic) SendData(payload string) error {
 		} else {
 			payloadSlices[arrayIndex] = payload[i : i+1000]
 		}
+
+		arrayIndex++
 	}
 
 	for _, part := range payloadSlices {
