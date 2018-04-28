@@ -233,13 +233,26 @@ func (c *Crznic) SendData(payload string) error {
 		return errors.New("no connection established")
 	}
 
-	payload = " " + payload
+	payload = " <<R" + payload + "R>>"
+	var payloadSlices []string
 
-	c.SendTCPPacket("PSH-ACK", payload)
-	err := c.ListenForACK()
-	if err != nil {
-		return err
+	arrayIndex := 0
+	for i := 0; i < len(payload); i += 1000 {
+		if i + 1000 > len(payload) {
+			payloadSlices[arrayIndex] = payload[i :]
+		} else {
+			payloadSlices[arrayIndex] = payload[i : i+1000]
+		}
 	}
+
+	for _, part := range payloadSlices {
+		c.SendTCPPacket("PSH-ACK", part)
+		err := c.ListenForACK()
+		if err != nil {
+			return err
+		}
+	}
+
 
 	return nil
 }
