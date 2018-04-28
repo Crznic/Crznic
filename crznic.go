@@ -221,6 +221,12 @@ func (c *Crznic) ReceiveConnection() error {
 	return nil
 }
 
+// terminate the connection with a RST packet
+func (c *Crznic) TerminateConnection() {
+	c.SendTCPPacket("RST", "")
+	c.connected = false
+}
+
 // send data to an established connection
 func (c *Crznic) SendData(payload string) error {
 	if !c.connected {
@@ -248,4 +254,14 @@ func (c *Crznic) ReceiveData() (string, error) {
 	c.SendTCPPacket("ACK", "")
 
 	return payload, err
+}
+
+// connect, send and receive data in a full session, then terminate with a reset
+func (c *Crznic) FullBeacon(payload string) (string, error) {
+	c.InitiateConnection()
+	c.SendData(payload)
+	response, err := c.ReceiveData()
+	c.TerminateConnection()
+
+	return response, err
 }
