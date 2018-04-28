@@ -217,6 +217,8 @@ func (c *Crznic) SendData(payload string) error {
 		return errors.New("no connection established")
 	}
 
+	payload = " " + payload
+
 	c.SendTCPPacket("PSH-ACK", payload)
 	err := c.ListenForACK()
 	if err != nil {
