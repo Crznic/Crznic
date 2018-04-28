@@ -8,6 +8,7 @@ import (
 	"errors"
 	"encoding/hex"
 	"fmt"
+	"bytes"
 )
 
 // getMacAddr gets the MAC hardware
