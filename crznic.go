@@ -217,7 +217,7 @@ func (c *Crznic) SendData(payload string) error {
 	}
 
 	c.SendTCPPacket("", payload)
-	err = c.ListenForACK()
+	err := c.ListenForACK()
 	if err != nil {
 		return err
 	}
