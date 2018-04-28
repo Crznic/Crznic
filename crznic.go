@@ -215,6 +215,7 @@ func (c *Crznic) InitiateConnection() error {
 func (c *Crznic) ReceiveConnection() error {
 	c.ListenForSYN()
 	c.SendTCPPacket("SYN-ACK", "")
+	c.ListenForACK()
 
 	c.connected = true
 	return nil
