@@ -211,6 +211,15 @@ func (c *Crznic) InitiateConnection() error {
 	return nil
 }
 
+// receive a connection as a server
+func (c *Crznic) ReceiveConnection() error {
+	c.ListenForSYN()
+	c.SendTCPPacket("SYN-ACK", "")
+
+	c.connected = true
+	return nil
+}
+
 // send data to an established connection
 func (c *Crznic) SendData(payload string) error {
 	if !c.connected {
