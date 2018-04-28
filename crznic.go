@@ -139,6 +139,7 @@ func (c *Crznic) ListenForACK() error {
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
 		if tcp.ACK && !tcp.SYN {
+
 			return nil
 		}
 	}
@@ -155,6 +156,8 @@ func (c *Crznic) ListenForNoFlag() (string, error) {
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
 		if !tcp.ACK && !tcp.SYN && !tcp.RST && !tcp.FIN {
+			c.Ack = tcp.Seq + uint32(len(tcp.Payload))
+			c.Seq = tcp.Ack
 			return string(tcp.Payload), nil
 		}
 	}
@@ -231,6 +234,8 @@ func (c *Crznic) ReceiveData() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	c.
 	c.SendTCPPacket("ACK", "")
 
 	return payload, err
