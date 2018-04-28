@@ -7,6 +7,7 @@ import (
   "github.com/google/gopacket/layers"
   "github.com/google/gopacket/pcap"
 	"errors"
+	"strings"
 )
 
 
@@ -254,8 +255,9 @@ func (c *Crznic) SendData(payload string) error {
 	if err != nil {
 		return err
 	}
+
 	for _, part := range payloadSlices {
-		paddedPart := "          " + part
+		paddedPart := "          <<" + part
 		c.SendTCPPacket("PSH-ACK", paddedPart)
 		err := c.ListenForACK()
 		if err != nil {
@@ -269,14 +271,31 @@ func (c *Crznic) SendData(payload string) error {
 
 // receive data, respond with an ACK
 func (c *Crznic) ReceiveData() (string, error) {
-	payload, err := c.ListenForPSHACK()
-	if err != nil {
-		return "", err
+	data := ""
+
+	var err error
+	err = nil
+	for {
+		payload, err := c.ListenForPSHACK()
+		if err != nil {
+			return "", err
+		}
+
+		payload = strings.TrimLeft(payload, " ")
+		payload = payload[2:]
+
+		c.SendTCPPacket("ACK", "")
+
+		if payload[len(payload) - 3:] == "R>>" {
+			payload = payload[:len(payload) - 3]
+			data = data + payload
+			break;
+		} else {
+			data = data + payload
+		}
 	}
 
-	c.SendTCPPacket("ACK", "")
-
-	return payload, err
+	return data, err
 }
 
 // connect, send and receive data in a full session, then terminate with a reset
