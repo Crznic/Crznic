@@ -139,7 +139,6 @@ func (c *Crznic) ListenForACK() error {
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
 		if tcp.ACK && !tcp.SYN {
-
 			return nil
 		}
 	}
@@ -192,7 +191,6 @@ func (c *Crznic) SendTCPPacket(flag string, payload string) {
 
 	// send, update seq
 	c.SendPacket(buf.Bytes())
-	c.Seq++
 }
 
 // start a connection with the destination host
