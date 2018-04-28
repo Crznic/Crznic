@@ -233,7 +233,7 @@ func (c *Crznic) SendData(payload string) error {
 		return errors.New("no connection established")
 	}
 
-	payload = " <<R" + payload + "R>>"
+	payload = "<<R" + payload + "R>>"
 	payDiv := len(payload) / 1000
 	payMod := len(payload) % 1000
 	if payMod != 0 {
@@ -250,7 +250,8 @@ func (c *Crznic) SendData(payload string) error {
 	}
 
 	for _, part := range payloadSlices {
-		c.SendTCPPacket("PSH-ACK", part)
+		paddedPart := "          " + part
+		c.SendTCPPacket("PSH-ACK", paddedPart)
 		err := c.ListenForACK()
 		if err != nil {
 			return err
