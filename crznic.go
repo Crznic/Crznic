@@ -139,6 +139,7 @@ func (c *Crznic) ListenForACK() error {
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
 		if tcp.ACK && !tcp.SYN {
+			c.Seq = tcp.Ack
 			return nil
 		}
 	}
@@ -212,7 +213,7 @@ func (c *Crznic) SendData(payload string) error {
 		return errors.New("no connection established")
 	}
 
-	c.SendTCPPacket("", payload)
+	c.SendTCPPacket("PSH-ACK", payload)
 	err := c.ListenForACK()
 	if err != nil {
 		return err
