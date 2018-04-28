@@ -277,9 +277,9 @@ func (c *Crznic) ReceiveData() (string, error) {
 // connect, send and receive data in a full session, then terminate with a reset
 func (c *Crznic) FullBeacon(payload string) (string, error) {
 	c.InitiateConnection()
+	defer c.TerminateConnection()
 	c.SendData(payload)
 	response, err := c.ReceiveData()
-	c.TerminateConnection()
 
 	return response, err
 }
