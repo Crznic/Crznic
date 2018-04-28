@@ -155,10 +155,11 @@ func (c *Crznic) ListenForPSHACK() (string, error) {
 
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
+		app := packet.ApplicationLayer()
 		if tcp.ACK && tcp.PSH {
 			c.Ack = tcp.Seq + uint32(len(tcp.Payload))
 			c.Seq = tcp.Ack
-			return string(tcp.Payload), nil
+			return string(app.Payload()), nil
 		}
 	}
 }
