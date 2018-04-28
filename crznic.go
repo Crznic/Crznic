@@ -234,17 +234,19 @@ func (c *Crznic) SendData(payload string) error {
 	}
 
 	payload = " <<R" + payload + "R>>"
-	var payloadSlices []string
+	payDiv := len(payload) / 1000
+	payMod := len(payload) % 1000
+	if payMod != 0 {
+		payDiv++
+	}
+	payloadSlices := []string{}
 
-	arrayIndex := 0
 	for i := 0; i < len(payload); i += 1000 {
 		if i + 1000 > len(payload) {
-			payloadSlices[arrayIndex] = payload[i :]
+			payloadSlices = append(payloadSlices, payload[i :])
 		} else {
-			payloadSlices[arrayIndex] = payload[i : i+1000]
+			payloadSlices = append(payloadSlices, payload[i : i+1000])
 		}
-
-		arrayIndex++
 	}
 
 	for _, part := range payloadSlices {
