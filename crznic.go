@@ -203,12 +203,7 @@ func (c *Crznic) InitiateConnection() error {
 		return err
 	}
 
-	c.SendTCPPacket("SYN-ACK", "")
-	err = c.ListenForACK()
-	if err != nil {
-		return err
-	}
-
+	c.SendTCPPacket("ACK", "")
 	c.connected = true
 	return nil
 }
