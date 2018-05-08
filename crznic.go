@@ -8,7 +8,6 @@ import (
   "github.com/google/gopacket/pcap"
 	"errors"
 	"strings"
-  "fmt"
 )
 
 
@@ -44,24 +43,13 @@ func NewHost(ip net.IP, mac net.HardwareAddr, port uint16) *Host {
 
 // create a new Crznic object
 func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
-  MSS := &layers.TCPOption{
-      OptionType:	&layers.TCPOptionKinfMSS,
-      OptionLength:	4,
-      OptionData: []byte{0x05, 0xb4}, // 1460 bytes
-  }
-  SACKPermitted := &layers.TCPOption{
-      OptionType:	&layers.TCPOptionKindSACKPermitted,
-      OptionLength:	2,
-      OptionData: []byte{}, // 1460 bytes
-  }
   newCrznic := &Crznic{
 		Inter:			inter,
 		Src:				src,
 		Dst:				dst,
 		Seq:				seq,
-		Ack:				seq,
+		Ack:				1337,
 		connected: 	false,
-    options: []&layers.TCPOption{MSS, SACKPermitted}
   }
   return newCrznic
 }
@@ -71,7 +59,6 @@ func (c *Crznic) SendPacket(pkt []byte) {
   fd, _ := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
   defer syscall.Close(fd)
   if_info, _ := net.InterfaceByName(c.Inter)
-
 
   var haddr [8]byte
   copy(haddr[0:7], if_info.HardwareAddr[0:7])
@@ -185,11 +172,9 @@ func (c *Crznic) SendTCPPacket(flag string, payload string) {
   switch {
     case flag == "SYN":
       packet.TCP.SYN = true
-      packet.TCP.Options = c.options
 		case flag == "SYN-ACK":
 			packet.TCP.SYN = true
 			packet.TCP.ACK = true
-      packet.TCP.Options = c.options
     case flag == "ACK":
       packet.TCP.ACK = true
 		case flag == "PSH-ACK":
@@ -221,9 +206,9 @@ func (c *Crznic) InitiateConnection() error {
 	if err != nil {
 		return err
 	}
+
 	c.SendTCPPacket("ACK", "")
 	c.connected = true
-  fmt.Println("Connection Opened...")
 	return nil
 }
 
@@ -241,7 +226,6 @@ func (c *Crznic) ReceiveConnection() error {
 func (c *Crznic) TerminateConnection() {
 	c.SendTCPPacket("RST", "")
 	c.connected = false
-  fmt.Println("Connection Closed...")
 }
 
 // send data to an established connection
