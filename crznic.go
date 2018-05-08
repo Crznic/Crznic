@@ -121,6 +121,7 @@ func (c *Crznic) ListenForSYN() error {
 		if tcp.SYN && !tcp.ACK {
 			c.Ack = tcp.Seq + 1
 			c.Dst.Port = tcp.SrcPort
+      c.options = tcp.Options
 			return nil
 		}
 	}
