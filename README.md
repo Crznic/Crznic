@@ -34,7 +34,7 @@ crz := crznic.NewCrznic("eth0", srcHost, dstHost, 1)
 
 Send a SYN packet
 ```
-crz.SendTCPPacket("SYN", "MESSAGE")
+crz.SendTCPPacket("SYN", "")
 ```
 
 Listen for a packet

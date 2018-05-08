@@ -26,6 +26,7 @@ type Crznic struct {
   Seq				uint32
   Ack				uint32
   connected	bool
+  options   []layers.TCPOption
 }
 
 
@@ -43,6 +44,16 @@ func NewHost(ip net.IP, mac net.HardwareAddr, port uint16) *Host {
 
 // create a new Crznic object
 func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
+  MSS := layers.TCPOption{
+      OptionType:	layers.TCPOptionKindMSS,
+      OptionLength:	4,
+      OptionData: []byte{0x05, 0xb4}, // 1460 bytes
+  }
+  SACKPermitted := layers.TCPOption{
+      OptionType:	layers.TCPOptionKindSACKPermitted,
+      OptionLength:	2,
+      OptionData: []byte{}, // 1460 bytes
+  }
   newCrznic := &Crznic{
 		Inter:			inter,
 		Src:				src,
@@ -50,6 +61,7 @@ func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
 		Seq:				seq,
 		Ack:				1337,
 		connected: 	false,
+    options: []layers.TCPOption{MSS, SACKPermitted},
   }
   return newCrznic
 }
@@ -107,6 +119,7 @@ func (c *Crznic) ListenForSYN() error {
 		if tcp.SYN && !tcp.ACK {
 			c.Ack = tcp.Seq + 1
 			c.Dst.Port = tcp.SrcPort
+      c.options = tcp.Options
 			return nil
 		}
 	}
