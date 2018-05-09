@@ -53,7 +53,7 @@ func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
   SACKPermitted := layers.TCPOption{
       OptionType:	layers.TCPOptionKindSACKPermitted,
       OptionLength:	2,
-      OptionData: []byte{}, // empty but required by gopacket
+      OptionData: []byte{}, // 1460 bytes
   }
   newCrznic := &Crznic{
 		Inter:			inter,
@@ -242,6 +242,7 @@ func (c *Crznic) ReceiveConnection() error {
 	c.ListenForACK()
 
 	c.connected = true
+  fmt.Println("Connection Opened...")
 	return nil
 }
 
@@ -298,9 +299,11 @@ func (c *Crznic) ReceiveData() (string, error) {
 		if err != nil {
 			return "", err
 		}
-
 		payload = strings.TrimLeft(payload, " ")
 		payload = payload[2:]
+    if payload[:3] == "<<R"{
+      payload = payload[3:] // for first part
+    }
 
 		c.SendTCPPacket("ACK", "")
 
