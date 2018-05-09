@@ -53,7 +53,7 @@ func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
   SACKPermitted := layers.TCPOption{
       OptionType:	layers.TCPOptionKindSACKPermitted,
       OptionLength:	2,
-      OptionData: []byte{}, // 1460 bytes
+      OptionData: []byte{}, // must be empty but go packet requires it
   }
   newCrznic := &Crznic{
 		Inter:			inter,
@@ -99,7 +99,11 @@ func (c *Crznic) ReadPacket() (gopacket.Packet, error) {
 		for packet := range packetSource.Packets() {
 			for _, layer := range packet.Layers() {
 				if layer.LayerType() == layers.LayerTypeTCP {
-					return packet, nil
+          tcpLayer := packet.Layer(layers.LayerTypeTCP)
+          tcp, _ := tcpLayer.(*layers.TCP)
+          if tcp.DstPort == c.Src.Port{ // make sure is our tcp stuffs
+              return packet, nil
+          }
 				}
 			}
 		}
@@ -145,6 +149,7 @@ func (c *Crznic) ListenForSYNACK() error {
 		tcp, _ := tcpLayer.(*layers.TCP)
 		if tcp.SYN && tcp.ACK {
 			c.Ack = tcp.Seq + 1
+      c.Seq = c.Seq + 1
 			return nil
 		}
 	}
@@ -160,7 +165,7 @@ func (c *Crznic) ListenForACK() error {
 
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
-		if tcp.ACK && !tcp.SYN {
+		if tcp.ACK && !tcp.SYN && !tcp.PSH {
 			c.Seq = tcp.Ack
 			return nil
 		}
@@ -296,6 +301,8 @@ func (c *Crznic) ReceiveData() (string, error) {
 	err = nil
 	for {
 		payload, err := c.ListenForPSHACK()
+    c.SendTCPPacket("ACK", "")
+
 		if err != nil {
 			return "", err
 		}
@@ -304,8 +311,6 @@ func (c *Crznic) ReceiveData() (string, error) {
     if payload[:3] == "<<R"{
       payload = payload[3:] // for first part
     }
-
-		c.SendTCPPacket("ACK", "")
 
 		if payload[len(payload) - 3:] == "R>>" {
 			payload = payload[:len(payload) - 3]
