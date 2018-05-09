@@ -8,6 +8,7 @@ import (
   "github.com/google/gopacket/pcap"
 	"errors"
 	"strings"
+  "fmt"
 )
 
 
@@ -59,7 +60,7 @@ func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
 		Src:				src,
 		Dst:				dst,
 		Seq:				seq,
-		Ack:				1337,
+		Ack:				seq,
 		connected: 	false,
     options: []layers.TCPOption{MSS, SACKPermitted},
   }
@@ -71,6 +72,7 @@ func (c *Crznic) SendPacket(pkt []byte) {
   fd, _ := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
   defer syscall.Close(fd)
   if_info, _ := net.InterfaceByName(c.Inter)
+
 
   var haddr [8]byte
   copy(haddr[0:7], if_info.HardwareAddr[0:7])
@@ -185,9 +187,11 @@ func (c *Crznic) SendTCPPacket(flag string, payload string) {
   switch {
     case flag == "SYN":
       packet.TCP.SYN = true
+      packet.TCP.Options = c.options
 		case flag == "SYN-ACK":
 			packet.TCP.SYN = true
 			packet.TCP.ACK = true
+      packet.TCP.Options = c.options
     case flag == "ACK":
       packet.TCP.ACK = true
 		case flag == "PSH-ACK":
@@ -219,9 +223,9 @@ func (c *Crznic) InitiateConnection() error {
 	if err != nil {
 		return err
 	}
-
 	c.SendTCPPacket("ACK", "")
 	c.connected = true
+  fmt.Println("Connection Opened...")
 	return nil
 }
 
@@ -239,6 +243,7 @@ func (c *Crznic) ReceiveConnection() error {
 func (c *Crznic) TerminateConnection() {
 	c.SendTCPPacket("RST", "")
 	c.connected = false
+  fmt.Println("Connection Closed...")
 }
 
 // send data to an established connection
