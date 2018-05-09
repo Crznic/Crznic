@@ -53,7 +53,7 @@ func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
   SACKPermitted := layers.TCPOption{
       OptionType:	layers.TCPOptionKindSACKPermitted,
       OptionLength:	2,
-      OptionData: []byte{}, // 1460 bytes
+      OptionData: []byte{}, // empty but required by gopacket
   }
   newCrznic := &Crznic{
 		Inter:			inter,
