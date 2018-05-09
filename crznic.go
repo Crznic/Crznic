@@ -118,9 +118,15 @@ func (c *Crznic) ListenForSYN() error {
 
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
+    ipLayer := packet.Layer(layers.LayerTypeIPv4)
+		ip, _ := ipLayer.(*layers.IPv4)
+    ethLayer := packet.Layer(layers.LayerTypeEthernet)
+		eth, _ := ethLayer.(*layers.Ethernet)
 		if tcp.SYN && !tcp.ACK {
 			c.Ack = tcp.Seq + 1
 			c.Dst.Port = tcp.SrcPort
+      c.Dst.Ip = ip.SrcIP
+      c.Dst.Mac = eth.SrcMAC
       c.options = tcp.Options
 			return nil
 		}
