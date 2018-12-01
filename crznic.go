@@ -1,92 +1,92 @@
 package crznic
 
 import (
-  "net"
-  "syscall"
-  "github.com/google/gopacket"
-  "github.com/google/gopacket/layers"
-  "github.com/google/gopacket/pcap"
+	"net"
+	"syscall"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 	"errors"
 	"strings"
-  "fmt"
+	"fmt"
 )
-
 
 // the host object, used for keeping track of ip/mac/port associated with each target/source
 type Host struct {
-  Ip		net.IP
-  Mac		net.HardwareAddr
-  Port	layers.TCPPort
+	Ip   net.IP
+	Mac  net.HardwareAddr
+	Port layers.TCPPort
 }
 
 // the connection handler object, keeps track of seq and ack, contains methods for working with the socket
 type Crznic struct {
-  Inter			string
-  Src				*Host
-  Dst				*Host
-  Seq				uint32
-  Ack				uint32
-  connected	bool
-  options   []layers.TCPOption
+	Inter     string
+	Src       *Host
+	Dst       *Host
+	Seq       uint32
+	Ack       uint32
+	connected bool
+	options   []layers.TCPOption
 }
-
 
 // create a new Host object
 func NewHost(ip net.IP, mac net.HardwareAddr, port uint16) *Host {
 	layersPort := layers.TCPPort(port)
-  newHost := &Host{
-		Ip:		ip,
-		Mac:	mac,
+	newHost := &Host{
+		Ip:   ip,
+		Mac:  mac,
 		Port: layersPort,
-  }
+	}
 
-  return newHost
+	return newHost
 }
 
 // create a new Crznic object
 func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
-  MSS := layers.TCPOption{
-      OptionType:	layers.TCPOptionKindMSS,
-      OptionLength:	4,
-      OptionData: []byte{0x05, 0xb4}, // 1460 bytes
-  }
-  SACKPermitted := layers.TCPOption{
-      OptionType:	layers.TCPOptionKindSACKPermitted,
-      OptionLength:	2,
-      OptionData: []byte{}, // must be empty but go packet requires it
-  }
-  newCrznic := &Crznic{
-		Inter:			inter,
-		Src:				src,
-		Dst:				dst,
-		Seq:				seq,
-		Ack:				seq,
-		connected: 	false,
-    options: []layers.TCPOption{MSS, SACKPermitted},
-  }
-  return newCrznic
+	MSS := layers.TCPOption{
+		OptionType:   layers.TCPOptionKindMSS,
+		OptionLength: 4,
+		OptionData:   []byte{0x05, 0xb4}, // 1460 bytes
+	}
+
+	SACKPermitted := layers.TCPOption{
+		OptionType:   layers.TCPOptionKindSACKPermitted,
+		OptionLength: 2,
+		OptionData:   []byte{}, // must be empty but go packet requires it
+	}
+
+	newCrznic := &Crznic{
+		Inter:     inter,
+		Src:       src,
+		Dst:       dst,
+		Seq:       seq,
+		Ack:       seq,
+		connected: false,
+		options:   []layers.TCPOption{MSS, SACKPermitted},
+	}
+
+	return newCrznic
 }
 
 // send a constructed packet
 func (c *Crznic) SendPacket(pkt []byte) {
-  fd, _ := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
-  defer syscall.Close(fd)
-  if_info, _ := net.InterfaceByName(c.Inter)
+	fd, _ := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
+	defer syscall.Close(fd)
+	if_info, _ := net.InterfaceByName(c.Inter)
 
-
-  var haddr [8]byte
-  copy(haddr[0:7], if_info.HardwareAddr[0:7])
-  addr := syscall.SockaddrLinklayer{
+	var haddr [8]byte
+	copy(haddr[0:7], if_info.HardwareAddr[0:7])
+	addr := syscall.SockaddrLinklayer{
 		Protocol: syscall.ETH_P_IP,
 		Ifindex:  if_info.Index,
-    Halen:    uint8(len(if_info.HardwareAddr)),
+		Halen:    uint8(len(if_info.HardwareAddr)),
 		Addr:     haddr,
-  }
+	}
 
-  syscall.Bind(fd, &addr)
-  syscall.SetLsfPromisc(c.Inter, true)
-  syscall.Write(fd, pkt)
-  syscall.SetLsfPromisc(c.Inter, false)
+	syscall.Bind(fd, &addr)
+	syscall.SetLsfPromisc(c.Inter, true)
+	syscall.Write(fd, pkt)
+	syscall.SetLsfPromisc(c.Inter, false)
 }
 
 // read a packet off the wire
@@ -99,11 +99,11 @@ func (c *Crznic) ReadPacket() (gopacket.Packet, error) {
 		for packet := range packetSource.Packets() {
 			for _, layer := range packet.Layers() {
 				if layer.LayerType() == layers.LayerTypeTCP {
-          tcpLayer := packet.Layer(layers.LayerTypeTCP)
-          tcp, _ := tcpLayer.(*layers.TCP)
-          if tcp.DstPort == c.Src.Port{ // make sure is our tcp stuffs
-              return packet, nil
-          }
+					tcpLayer := packet.Layer(layers.LayerTypeTCP)
+					tcp, _ := tcpLayer.(*layers.TCP)
+					if tcp.DstPort == c.Src.Port { // make sure is our tcp stuffs
+						return packet, nil
+					}
 				}
 			}
 		}
@@ -122,16 +122,16 @@ func (c *Crznic) ListenForSYN() error {
 
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
-    ipLayer := packet.Layer(layers.LayerTypeIPv4)
+		ipLayer := packet.Layer(layers.LayerTypeIPv4)
 		ip, _ := ipLayer.(*layers.IPv4)
-    ethLayer := packet.Layer(layers.LayerTypeEthernet)
+		ethLayer := packet.Layer(layers.LayerTypeEthernet)
 		eth, _ := ethLayer.(*layers.Ethernet)
 		if tcp.SYN && !tcp.ACK {
 			c.Ack = tcp.Seq + 1
 			c.Dst.Port = tcp.SrcPort
-      c.Dst.Ip = ip.SrcIP
-      c.Dst.Mac = eth.SrcMAC
-      c.options = tcp.Options
+			c.Dst.Ip = ip.SrcIP
+			c.Dst.Mac = eth.SrcMAC
+			c.options = tcp.Options
 			return nil
 		}
 	}
@@ -149,7 +149,7 @@ func (c *Crznic) ListenForSYNACK() error {
 		tcp, _ := tcpLayer.(*layers.TCP)
 		if tcp.SYN && tcp.ACK {
 			c.Ack = tcp.Seq + 1
-      c.Seq = c.Seq + 1
+			c.Seq = c.Seq + 1
 			return nil
 		}
 	}
@@ -195,29 +195,29 @@ func (c *Crznic) ListenForPSHACK() (string, error) {
 func (c *Crznic) SendTCPPacket(flag string, payload string) {
 	// build
 	packet := NewPacket(c)
-  switch {
-    case flag == "SYN":
-      packet.TCP.SYN = true
-      packet.TCP.Options = c.options
+	switch {
+		case flag == "SYN":
+			packet.TCP.SYN = true
+			packet.TCP.Options = c.options
 		case flag == "SYN-ACK":
 			packet.TCP.SYN = true
 			packet.TCP.ACK = true
-      packet.TCP.Options = c.options
-    case flag == "ACK":
-      packet.TCP.ACK = true
+			packet.TCP.Options = c.options
+		case flag == "ACK":
+			packet.TCP.ACK = true
 		case flag == "PSH-ACK":
 			packet.TCP.PSH = true
 			packet.TCP.ACK = true
 		case flag == "PSH":
 			packet.TCP.PSH = true
-    case flag == "FIN":
-      packet.TCP.FIN = true
+		case flag == "FIN":
+			packet.TCP.FIN = true
 		case flag == "RST":
 			packet.TCP.RST = true
 		case flag == "RST-ACK":
 			packet.TCP.RST = true
 			packet.TCP.ACK = true
-  }
+	}
 
 	// serialize
 	buf := gopacket.NewSerializeBuffer()
@@ -236,7 +236,7 @@ func (c *Crznic) InitiateConnection() error {
 	}
 	c.SendTCPPacket("ACK", "")
 	c.connected = true
-  fmt.Println("Connection Opened...")
+	fmt.Println("Connection Opened...")
 	return nil
 }
 
@@ -247,7 +247,7 @@ func (c *Crznic) ReceiveConnection() error {
 	c.ListenForACK()
 
 	c.connected = true
-  fmt.Println("Connection Opened...")
+	fmt.Println("Connection Opened...")
 	return nil
 }
 
@@ -255,7 +255,7 @@ func (c *Crznic) ReceiveConnection() error {
 func (c *Crznic) TerminateConnection() {
 	c.SendTCPPacket("RST", "")
 	c.connected = false
-  fmt.Println("Connection Closed...")
+	fmt.Println("Connection Closed...")
 }
 
 // send data to an established connection
@@ -273,10 +273,10 @@ func (c *Crznic) SendData(payload string) error {
 	payloadSlices := []string{}
 
 	for i := 0; i < len(payload); i += 1000 {
-		if i + 1000 > len(payload) {
-			payloadSlices = append(payloadSlices, payload[i :])
+		if i+1000 > len(payload) {
+			payloadSlices = append(payloadSlices, payload[i:])
 		} else {
-			payloadSlices = append(payloadSlices, payload[i : i+1000])
+			payloadSlices = append(payloadSlices, payload[i:i+1000])
 		}
 	}
 
@@ -289,7 +289,6 @@ func (c *Crznic) SendData(payload string) error {
 		}
 	}
 
-
 	return nil
 }
 
@@ -301,19 +300,20 @@ func (c *Crznic) ReceiveData() (string, error) {
 	err = nil
 	for {
 		payload, err := c.ListenForPSHACK()
-    c.SendTCPPacket("ACK", "")
+		c.SendTCPPacket("ACK", "")
 
 		if err != nil {
 			return "", err
 		}
+
 		payload = strings.TrimLeft(payload, " ")
 		payload = payload[2:]
-    if payload[:3] == "<<R"{
-      payload = payload[3:] // for first part
-    }
+		if payload[:3] == "<<R" {
+			payload = payload[3:] // for first part
+		}
 
-		if payload[len(payload) - 3:] == "R>>" {
-			payload = payload[:len(payload) - 3]
+		if payload[len(payload)-3:] == "R>>" {
+			payload = payload[:len(payload)-3]
 			data = data + payload
 			break;
 		} else {
