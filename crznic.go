@@ -7,7 +7,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"errors"
-	"strings"
+        "strings"
 	"fmt"
 )
 
@@ -27,6 +27,7 @@ type Crznic struct {
 	Ack       uint32
 	connected bool
 	options   []layers.TCPOption
+	socket_fd int
 }
 
 // create a new Host object
@@ -60,9 +61,10 @@ func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
 		Src:       src,
 		Dst:       dst,
 		Seq:       seq,
-		Ack:       seq,
+		Ack:       0,
 		connected: false,
 		options:   []layers.TCPOption{MSS, SACKPermitted},
+		socket_fd: -1,
 	}
 
 	return newCrznic
@@ -70,8 +72,10 @@ func NewCrznic(inter string, src, dst *Host, seq uint32) *Crznic {
 
 // send a constructed packet
 func (c *Crznic) SendPacket(pkt []byte) {
-	fd, _ := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
-	defer syscall.Close(fd)
+	if c.socket_fd == -1{
+		fd, _ := syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, syscall.ETH_P_ALL)
+		c.socket_fd = fd
+	}
 	if_info, _ := net.InterfaceByName(c.Inter)
 
 	var haddr [8]byte
@@ -83,9 +87,10 @@ func (c *Crznic) SendPacket(pkt []byte) {
 		Addr:     haddr,
 	}
 
-	syscall.Bind(fd, &addr)
+	syscall.Bind(c.socket_fd, &addr)
 	syscall.SetLsfPromisc(c.Inter, true)
-	syscall.Write(fd, pkt)
+	syscall.Write(c.socket_fd, pkt)
+	syscall.Fsync(c.socket_fd)
 	syscall.SetLsfPromisc(c.Inter, false)
 }
 
@@ -155,6 +160,24 @@ func (c *Crznic) ListenForSYNACK() error {
 	}
 }
 
+// listen for FIN-ACK, update object when received
+func (c *Crznic) ListenForFINACK() error {
+	for {
+		packet, err := c.ReadPacket()
+		if err != nil {
+			return err
+		}
+
+		tcpLayer := packet.Layer(layers.LayerTypeTCP)
+		tcp, _ := tcpLayer.(*layers.TCP)
+		if tcp.ACK && tcp.FIN{
+			c.Seq = tcp.Ack
+			c.Ack = tcp.Seq + 1
+			return nil
+		}
+	}
+}
+
 // listen for ACK, update object when received
 func (c *Crznic) ListenForACK() error {
 	for {
@@ -165,7 +188,7 @@ func (c *Crznic) ListenForACK() error {
 
 		tcpLayer := packet.Layer(layers.LayerTypeTCP)
 		tcp, _ := tcpLayer.(*layers.TCP)
-		if tcp.ACK && !tcp.SYN && !tcp.PSH {
+		if tcp.ACK {
 			c.Seq = tcp.Ack
 			return nil
 		}
@@ -212,6 +235,9 @@ func (c *Crznic) SendTCPPacket(flag string, payload string) {
 			packet.TCP.PSH = true
 		case flag == "FIN":
 			packet.TCP.FIN = true
+		case flag == "FIN-ACK":
+			packet.TCP.FIN = true
+			packet.TCP.ACK = true
 		case flag == "RST":
 			packet.TCP.RST = true
 		case flag == "RST-ACK":
@@ -255,6 +281,7 @@ func (c *Crznic) ReceiveConnection() error {
 func (c *Crznic) TerminateConnection() {
 	c.SendTCPPacket("RST", "")
 	c.connected = false
+	syscall.Close(c.socket_fd)
 	fmt.Println("Connection Closed...")
 }
 
@@ -263,61 +290,61 @@ func (c *Crznic) SendData(payload string) error {
 	if !c.connected {
 		return errors.New("no connection established")
 	}
-
-	payload = "<<R" + payload + "R>>"
-	payDiv := len(payload) / 1000
-	payMod := len(payload) % 1000
-	if payMod != 0 {
-		payDiv++
-	}
+	payload = payload + "\n" // for combatibility
 	payloadSlices := []string{}
-
-	for i := 0; i < len(payload); i += 1000 {
-		if i+1000 > len(payload) {
+	for i := 0; i < len(payload); i += 1024 {
+		if i+1024 > len(payload) {
 			payloadSlices = append(payloadSlices, payload[i:])
 		} else {
-			payloadSlices = append(payloadSlices, payload[i:i+1000])
+			payloadSlices = append(payloadSlices, payload[i:i+1024])
 		}
 	}
 
 	for _, part := range payloadSlices {
-		paddedPart := "          <<" + part
-		c.SendTCPPacket("PSH-ACK", paddedPart)
+		c.SendTCPPacket("PSH-ACK", part)
 		err := c.ListenForACK()
 		if err != nil {
 			return err
 		}
 	}
 
+	
 	return nil
 }
 
-// receive data, respond with an ACK
+// receive data, respond with an ACKs, and eventually FIN-ACK (if closed)
 func (c *Crznic) ReceiveData() (string, error) {
+        if !c.connected {
+		return "", errors.New("no connection established")
+	}
 	data := ""
-
-	var err error
+        var err error
 	err = nil
 	for {
-		payload, err := c.ListenForPSHACK()
-		c.SendTCPPacket("ACK", "")
-
-		if err != nil {
-			return "", err
-		}
-
-		payload = strings.TrimLeft(payload, " ")
-		payload = payload[2:]
-		if payload[:3] == "<<R" {
-			payload = payload[3:] // for first part
-		}
-
-		if payload[len(payload)-3:] == "R>>" {
-			payload = payload[:len(payload)-3]
-			data = data + payload
+		packet, _ := c.ReadPacket()
+                tcpLayer := packet.Layer(layers.LayerTypeTCP)
+		tcp, _ := tcpLayer.(*layers.TCP)
+                if tcp.FIN && tcp.ACK {
+			c.Ack = tcp.Seq + 1
+			c.SendTCPPacket("ACK", "")
+			c.SendTCPPacket("FIN-ACK", "")
+			c.connected = false
 			break;
-		} else {
-			data = data + payload
+                }
+                if tcp.RST {
+			c.connected = false
+			break;
+                }
+		app := packet.ApplicationLayer()
+		if tcp.ACK && tcp.PSH {
+			c.Ack = tcp.Seq + uint32(len(tcp.Payload))
+			c.Seq = tcp.Ack
+			payload := string(app.Payload())
+		        c.SendTCPPacket("ACK", "")
+                        data = data + payload
+                        if strings.HasSuffix(data, "\n"){
+				break;
+                        }
 		}
 	}
 
